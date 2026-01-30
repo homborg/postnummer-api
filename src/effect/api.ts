@@ -33,17 +33,12 @@ import {
 import { Effect, Layer, Option, pipe, Schema } from "effect";
 import { OpenApi } from "@effect/platform";
 
-import { CloudflareBindings } from "./bindings";
 import {
-  InvalidCoordinatesError,
   PostalCodeNotFoundError,
-  CacheError,
-  NominatimError,
 } from "./errors";
 import {
   Latitude,
   Longitude,
-  Source,
   LookupResponseSchema,
   LookupResponse,
   GeoJSONGeometrySchema,
@@ -181,8 +176,6 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
   "postalCode",
   (handlers) =>
     Effect.gen(function* () {
-      const { db } = yield* CloudflareBindings;
-
       return handlers
         .handle("lookup", ({ urlParams: { lat, lng } }) =>
           pipe(

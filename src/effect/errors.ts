@@ -38,28 +38,6 @@
 import { Data } from "effect";
 
 // =============================================================================
-// InvalidCoordinatesError
-// =============================================================================
-
-/**
- * Thrown when lat/lng coordinates are invalid.
- * Examples:
- * - lat=200 (out of -90..90 range)
- * - lng="abc" (not a number)
- * - Missing required coordinates
- */
-export class InvalidCoordinatesError extends Data.TaggedError(
-  "InvalidCoordinatesError"
-)<{
-  /** Human-readable error message */
-  readonly message: string;
-  /** The invalid latitude value, if provided */
-  readonly lat?: number | undefined;
-  /** The invalid longitude value, if provided */
-  readonly lng?: number | undefined;
-}> {}
-
-// =============================================================================
 // PostalCodeNotFoundError
 // =============================================================================
 
@@ -159,7 +137,6 @@ export class RateLimitError extends Data.TaggedError("RateLimitError")<{
  * ```
  */
 export type AppError =
-  | InvalidCoordinatesError
   | PostalCodeNotFoundError
   | NominatimError
   | CacheError

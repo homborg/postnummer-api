@@ -232,30 +232,3 @@ export const reverseGeocode = (
 
     return { result, geometry };
   });
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-/**
- * Build a map URL for a postal code result.
- *
- * This is a pure helper function (no Effect wrapper needed) that constructs
- * Google Maps and OpenStreetMap search URLs for a postal code.
- *
- * @param postalCode - The postal code
- * @param city - The city name
- * @param country - The country name
- * @returns MapUrls object with google, osm, and optionally polygon URLs
- */
-export function buildMapUrl(
-  postalCode: string,
-  city: string,
-  country: string
-): { google: string; osm: string } {
-  const query = encodeURIComponent(`${postalCode} ${city} ${country}`);
-  return {
-    google: `https://www.google.com/maps/search/${query}`,
-    osm: `https://www.openstreetmap.org/search?query=${query}`,
-  };
-}
