@@ -191,3 +191,83 @@ export const NominatimResponse = Schema.Struct({
 });
 
 export type NominatimResponse = typeof NominatimResponse.Type;
+
+// =============================================================================
+// HTTP API Response Schemas (for HttpApi with OpenAPI annotations)
+// =============================================================================
+
+/**
+ * LookupResponse schema for the /lookup endpoint.
+ * Same as PostalCodeResponse but with OpenAPI identifier annotation.
+ */
+export const LookupResponseSchema = Schema.Struct({
+  postalCode: Schema.String,
+  city: Schema.String,
+  country: Schema.String,
+  source: Source,
+  mapUrl: MapUrls,
+  coordinatesUrl: MapUrls,
+}).annotations({ identifier: "LookupResponse" });
+
+export type LookupResponse = typeof LookupResponseSchema.Type;
+
+/**
+ * GeoJSON geometry schema (simplified - accepts any valid GeoJSON geometry)
+ */
+export const GeoJSONGeometrySchema = Schema.Struct({
+  type: Schema.String,
+  coordinates: Schema.Unknown,
+}).annotations({ identifier: "GeoJSONGeometry" });
+
+export type GeoJSONGeometry = typeof GeoJSONGeometrySchema.Type;
+
+/**
+ * Cleanup response schema
+ */
+export const CleanupResponseSchema = Schema.Struct({
+  deleted: Schema.Number,
+}).annotations({ identifier: "CleanupResponse" });
+
+export type CleanupResponse = typeof CleanupResponseSchema.Type;
+
+// =============================================================================
+// HTTP API Error Schemas (distinct schemas per HTTP status)
+// =============================================================================
+
+/**
+ * Bad request error (400) - for invalid input
+ */
+export const BadRequestSchema = Schema.Struct({
+  error: Schema.String,
+}).annotations({ identifier: "BadRequest" });
+
+export type BadRequest = typeof BadRequestSchema.Type;
+
+/**
+ * Not found error (404) - includes optional coordinates for context
+ */
+export const NotFoundErrorSchema = Schema.Struct({
+  error: Schema.String,
+  lat: Schema.optional(Schema.Number),
+  lng: Schema.optional(Schema.Number),
+}).annotations({ identifier: "NotFoundError" });
+
+export type NotFoundError = typeof NotFoundErrorSchema.Type;
+
+/**
+ * Internal server error (500) - for server-side failures
+ */
+export const InternalErrorSchema = Schema.Struct({
+  error: Schema.String,
+}).annotations({ identifier: "InternalError" });
+
+export type InternalError = typeof InternalErrorSchema.Type;
+
+/**
+ * Bad gateway error (502) - for upstream service failures (Nominatim)
+ */
+export const BadGatewaySchema = Schema.Struct({
+  error: Schema.String,
+}).annotations({ identifier: "BadGateway" });
+
+export type BadGateway = typeof BadGatewaySchema.Type;

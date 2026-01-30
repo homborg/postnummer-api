@@ -40,75 +40,23 @@ import {
   CacheError,
   NominatimError,
 } from "./errors";
-import { Latitude, Longitude, MapUrls, Source } from "./schemas";
+import {
+  Latitude,
+  Longitude,
+  Source,
+  LookupResponseSchema,
+  LookupResponse,
+  GeoJSONGeometrySchema,
+  CleanupResponseSchema,
+  BadRequestSchema,
+  NotFoundErrorSchema,
+  InternalErrorSchema,
+  BadGatewaySchema,
+} from "./schemas";
 import { findPostalCode, findPolygonByPostalCode } from "./geo";
 import { findInCache, saveToCache, cleanupExpired, findGeometryByPostalCodeOnly } from "./cache";
 import { reverseGeocode } from "./nominatim";
 import geojson from "../postnumre";
-
-// =============================================================================
-// Response Schemas
-// =============================================================================
-
-/**
- * Map URLs in the response - links to Google Maps and OSM
- */
-const MapUrlsSchema = Schema.Struct({
-  google: Schema.String,
-  osm: Schema.String,
-  polygon: Schema.optional(Schema.String),
-});
-
-/**
- * Full response for the /lookup endpoint
- */
-const LookupResponseSchema = Schema.Struct({
-  postalCode: Schema.String,
-  city: Schema.String,
-  country: Schema.String,
-  source: Source,
-  mapUrl: MapUrlsSchema,
-  coordinatesUrl: MapUrlsSchema,
-}).annotations({ identifier: "LookupResponse" });
-
-type LookupResponse = typeof LookupResponseSchema.Type;
-
-/**
- * GeoJSON geometry schema (simplified - accepts any valid GeoJSON geometry)
- */
-const GeoJSONGeometrySchema = Schema.Struct({
-  type: Schema.String,
-  coordinates: Schema.Unknown,
-}).annotations({ identifier: "GeoJSONGeometry" });
-
-/**
- * Cleanup response schema
- */
-const CleanupResponseSchema = Schema.Struct({
-  deleted: Schema.Number,
-}).annotations({ identifier: "CleanupResponse" });
-
-/**
- * Distinct error schemas per HTTP status code.
- * HttpApi requires unique schemas for each status to avoid ambiguity.
- */
-const BadRequestSchema = Schema.Struct({
-  error: Schema.String,
-}).annotations({ identifier: "BadRequest" });
-
-const NotFoundErrorSchema = Schema.Struct({
-  error: Schema.String,
-  lat: Schema.optional(Schema.Number),
-  lng: Schema.optional(Schema.Number),
-}).annotations({ identifier: "NotFoundError" });
-
-const InternalErrorSchema = Schema.Struct({
-  error: Schema.String,
-}).annotations({ identifier: "InternalError" });
-
-const BadGatewaySchema = Schema.Struct({
-  error: Schema.String,
-}).annotations({ identifier: "BadGateway" });
 
 // =============================================================================
 // API Definition
