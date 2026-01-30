@@ -1,0 +1,9 @@
+name = "postnummer-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "postal-cache"
+database_id = "3d093002-bf3a-43ad-bf01-3983dce14a63"
+migrations_dir = "migrations"
