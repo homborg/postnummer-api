@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Postal Code Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; }
+    #map { height: 100vh; width: 100%; }
+    .info-box {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      max-width: 280px;
+    }
+    .info-box h2 { font-size: 1.2rem; margin-bottom: 4px; }
+    .info-box p { color: #666; font-size: 0.9rem; margin: 2px 0; }
+    .info-box .source { 
+      display: inline-block;
+      background: #e0e7ff;
+      color: #3730a3;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      margin-top: 6px;
+    }
+    .loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      background: white;
+      padding: 20px 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .error {
+      background: #fef2f2;
+      color: #dc2626;
+      padding: 12px 16px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="loading" class="loading">Loading...</div>
+  <div id="info" class="info-box" style="display: none;"></div>
+  
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const lat = parseFloat(params.get('lat'));
+    const lng = parseFloat(params.get('lng'));
+    
+    if (isNaN(lat) || isNaN(lng)) {
+      document.getElementById('loading').innerHTML = '<div class="error">Missing or invalid lat/lng parameters</div>';
+    } else {
+      const map = L.map('map').setView([lat, lng], 14);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+      
+      // Add marker for the coordinates
+      const marker = L.marker([lat, lng]).addTo(map);
+      
+      // Fetch postal code data
+      fetch(`/lookup?lat=${lat}&lng=${lng}`)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('loading').style.display = 'none';
+          
+          if (data.error) {
+            document.getElementById('info').innerHTML = `<div class="error">${data.error}</div>`;
+            document.getElementById('info').style.display = 'block';
+            return;
+          }
+          
+          // Show info box
+          document.getElementById('info').innerHTML = `
+            <h2>${data.postalCode} ${data.city}</h2>
+            <p>${data.country}</p>
+            <p>Coordinates: ${lat.toFixed(6)}, ${lng.toFixed(6)}</p>
+            <span class="source">${data.source}</span>
+          `;
+          document.getElementById('info').style.display = 'block';
+          
+          marker.bindPopup(`<b>${data.postalCode} ${data.city}</b><br>${data.country}`).openPopup();
+          
+          // Fetch polygon if available (only for cache/nominatim sources)
+          if (data.source !== 'local') {
+            fetchPolygon(lat, lng, map);
+          }
+        })
+        .catch(err => {
+          document.getElementById('loading').innerHTML = `<div class="error">Failed to load: ${err.message}</div>`;
+        });
+      
+      async function fetchPolygon(lat, lng, map) {
+        // For non-local sources, we can try to get the polygon from Nominatim directly
+        // This is a separate request to show the postal code boundary
+        try {
+          const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&polygon_geojson=1`;
+          const res = await fetch(url, {
+            headers: { 'User-Agent': 'PostalCodeAPI/1.0' }
+          });
+          const data = await res.json();
+          
+          if (data.geojson) {
+            const polygon = L.geoJSON(data.geojson, {
+              style: {
+                color: '#3b82f6',
+                weight: 2,
+                fillColor: '#3b82f6',
+                fillOpacity: 0.15
+              }
+            }).addTo(map);
+            
+            // Fit map to show both marker and polygon
+            const bounds = polygon.getBounds();
+            map.fitBounds(bounds, { padding: [50, 50] });
+          }
+        } catch (e) {
+          // Polygon fetch is optional, don't show error
+          console.log('Could not fetch polygon:', e);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

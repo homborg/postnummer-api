@@ -1,6 +1,7 @@
 export interface MapUrls {
   google: string;
   osm: string;
+  polygon?: string;
 }
 
 export interface PostalCodeResult {
@@ -23,10 +24,11 @@ export function buildMapUrl(postalCode: string, city: string, country: string): 
   };
 }
 
-export function buildCoordinatesUrl(lat: number, lng: number): MapUrls {
+export function buildCoordinatesUrl(lat: number, lng: number, baseUrl?: string): MapUrls {
   return {
     google: `https://www.google.com/maps?q=${lat},${lng}`,
     osm: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}&zoom=15`,
+    polygon: baseUrl ? `${baseUrl}/map?lat=${lat}&lng=${lng}` : `/map?lat=${lat}&lng=${lng}`,
   };
 }
 

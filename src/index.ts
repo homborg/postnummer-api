@@ -17,9 +17,14 @@ app.use("/lookup", async (c, next) => {
 });
 
 import indexHtml from "./index.html";
+import mapHtml from "./map.html";
 
 app.get("/", (c) => {
   return c.html(indexHtml);
+});
+
+app.get("/map", (c) => {
+  return c.html(mapHtml);
 });
 
 app.get("/lookup", async (c) => {
