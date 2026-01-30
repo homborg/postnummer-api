@@ -96,10 +96,8 @@
           
           marker.bindPopup(`<b>${data.postalCode} ${data.city}</b><br>${data.country}`).openPopup();
           
-          // Fetch polygon if available (only for cache/nominatim sources)
-          if (data.source !== 'local') {
-            fetchPolygon(lat, lng, map);
-          }
+          // Fetch polygon from Nominatim for visualization
+          fetchPolygon(lat, lng, map);
         })
         .catch(err => {
           document.getElementById('loading').innerHTML = `<div class="error">Failed to load: ${err.message}</div>`;
