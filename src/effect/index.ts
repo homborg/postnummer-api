@@ -87,6 +87,28 @@ async function handleHtmlRequest(
 }
 
 // =============================================================================
+// Static API Layer (built once at module load)
+// =============================================================================
+
+/**
+ * Swagger UI layer - built once at startup.
+ * This is expensive to construct so we do it at module scope.
+ */
+const SwaggerLayer = HttpApiSwagger.layer({
+  path: "/docs",
+}).pipe(Layer.provide(PostnummerApiLive));
+
+/**
+ * Base API layer without bindings - built once at startup.
+ * Combines the API implementation with Swagger UI and HTTP server context.
+ */
+const ApiLayerBase = Layer.mergeAll(
+  PostnummerApiLive,
+  SwaggerLayer,
+  HttpServer.layerContext
+);
+
+// =============================================================================
 // API Handler Factory
 // =============================================================================
 
@@ -94,24 +116,14 @@ async function handleHtmlRequest(
  * Create an API handler for the given environment.
  *
  * Uses HttpApiBuilder.toWebHandler to create a web-standard handler.
- * The handler is created per-request with the Cloudflare bindings.
+ * Only the bindings layer varies per-request; the API layer base is reused.
  */
 function createApiHandler(env: Env): {
   handler: (request: Request) => Promise<Response>;
   dispose: () => Promise<void>;
 } {
   const bindingsLayer = makeCloudflareBindingsLayer(env);
-
-  // Build the full API layer with Swagger UI
-  const SwaggerLayer = HttpApiSwagger.layer({
-    path: "/docs",
-  }).pipe(Layer.provide(PostnummerApiLive));
-
-  const ApiLive = Layer.mergeAll(
-    PostnummerApiLive,
-    SwaggerLayer,
-    HttpServer.layerContext
-  ).pipe(Layer.provide(bindingsLayer));
+  const ApiLive = ApiLayerBase.pipe(Layer.provide(bindingsLayer));
 
   return HttpApiBuilder.toWebHandler(ApiLive);
 }
