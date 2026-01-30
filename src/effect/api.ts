@@ -227,7 +227,12 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
               // Try D1 cache
               const cached = yield* pipe(
                 findInCache(lat, lng),
-                Effect.catchTag("CacheError", () => Effect.succeed(Option.none()))
+                Effect.catchTag("CacheError", (e) =>
+                  pipe(
+                    Effect.logWarning(`Cache lookup failed, falling back to Nominatim: ${e.message}`),
+                    Effect.map(() => Option.none())
+                  )
+                )
               );
               if (Option.isSome(cached)) {
                 return respond({
