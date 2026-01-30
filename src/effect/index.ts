@@ -2,123 +2,151 @@
  * Effect Entry Point for Cloudflare Workers
  *
  * This module exports the main fetch handler for the Postnummer API,
- * wiring up the Effect HTTP router with Cloudflare Worker bindings.
+ * combining HttpApi (JSON endpoints) with HttpRouter (HTML pages).
+ *
+ * Architecture:
+ * - HttpApi (api.ts): JSON API endpoints with OpenAPI/Swagger
+ *   - GET /lookup - coordinates to postal code
+ *   - GET /polygon/:postalCode - GeoJSON geometry
+ *   - GET /cleanup - cache cleanup
+ *   - GET /docs - Swagger UI (auto-generated)
+ *
+ * - HttpRouter (routes.ts): HTML pages
+ *   - GET / - API documentation homepage
+ *   - GET /map - Map visualization page
  *
  * Key Effect Patterns for Cloudflare Workers:
  *
- * 1. Request-time Layer construction
+ * 1. HttpApiBuilder.toWebHandler - Converting HttpApi to web handler
+ *    Creates a handler function that takes a Request and returns Response.
+ *
+ * 2. Request-time Layer construction
  *    Cloudflare Workers receive `env` (bindings) with each request.
- *    We construct the Layer at request time and provide it to the Effect:
+ *    We must construct the Layer at request time.
  *
- *    ```typescript
- *    async fetch(request: Request, env: Env): Promise<Response> {
- *      const layer = makeCloudflareBindingsLayer(env);
- *      return Effect.runPromise(
- *        program.pipe(Effect.provide(layer))
- *      );
- *    }
- *    ```
- *
- * 2. HttpRouter.toHttpApp - Converting router to an HttpApp
- *    The router is an HttpRouter<E, R>. We need to convert it to an
- *    HttpApp (Effect<HttpServerResponse, E, R>) to run it:
- *
- *    ```typescript
- *    const httpApp = HttpRouter.toHttpApp(router);
- *    ```
- *
- * 3. HttpServerResponse.toWeb - Converting to web Response
- *    Effect's HttpServerResponse can be converted to a web Response:
- *
- *    ```typescript
- *    const webResponse = HttpServerResponse.toWeb(effectResponse);
- *    ```
- *
- * 4. Effect.provide - Supplying dependencies
- *    Effect.provide(layer) removes the dependency from the Effect's R type,
- *    allowing us to run the Effect with Effect.runPromise.
- *
- * Why this approach?
- * - Cloudflare bindings come per-request in the env parameter
- * - We must construct and provide the Layer per-request
- * - This is clean and explicit about what happens at each step
+ * 3. Routing strategy
+ *    HTML routes (/, /map) go to HttpRouter.
+ *    API routes (/lookup, /polygon, /cleanup, /docs) go to HttpApi.
  */
 
-import { Effect, pipe } from "effect";
+import { Effect, Layer, pipe } from "effect";
 import * as HttpRouter from "@effect/platform/HttpRouter";
 import * as HttpServerRequest from "@effect/platform/HttpServerRequest";
 import * as HttpServerResponse from "@effect/platform/HttpServerResponse";
+import * as HttpServer from "@effect/platform/HttpServer";
+import { HttpApiBuilder, HttpApiSwagger } from "@effect/platform";
 
-import { router } from "./routes";
-import { makeCloudflareBindingsLayer, type Env } from "./bindings";
+import { htmlRouter } from "./routes";
+import {
+  PostnummerApi,
+  PostnummerApiLive,
+  PostalCodeGroupLive,
+} from "./api";
+import {
+  CloudflareBindings,
+  makeCloudflareBindingsLayer,
+  type Env,
+} from "./bindings";
 
 // =============================================================================
-// Convert Router to HttpApp
+// HTML Router Handler
 // =============================================================================
 
 /**
- * Convert our router to an HttpApp.
- *
- * HttpRouter.toHttpApp returns an Effect that produces the HttpApp.
- * The HttpApp itself is Effect<HttpServerResponse, E, R | HttpServerRequest>.
- *
- * Since our router has all errors handled by catchAll, E = never.
- * R = CloudflareBindings (our router's dependencies).
+ * Convert the HTML router to an HttpApp for handling HTML pages.
  */
-const httpApp = HttpRouter.toHttpApp(router);
+const htmlApp = HttpRouter.toHttpApp(htmlRouter);
+
+/**
+ * Handle HTML routes (/, /map) using the HttpRouter.
+ */
+async function handleHtmlRequest(
+  request: Request,
+  bindingsLayer: Layer.Layer<CloudflareBindings>
+): Promise<Response | null> {
+  const url = new URL(request.url);
+
+  // Only handle HTML routes
+  if (url.pathname !== "/" && url.pathname !== "/map") {
+    return null;
+  }
+
+  const program = pipe(
+    htmlApp,
+    Effect.flatMap((app) => app),
+    Effect.provideService(
+      HttpServerRequest.HttpServerRequest,
+      HttpServerRequest.fromWeb(request)
+    ),
+    Effect.provide(bindingsLayer),
+    Effect.scoped
+  );
+
+  const response = await Effect.runPromise(program);
+  return HttpServerResponse.toWeb(response);
+}
+
+// =============================================================================
+// API Handler Factory
+// =============================================================================
+
+/**
+ * Create an API handler for the given environment.
+ *
+ * Uses HttpApiBuilder.toWebHandler to create a web-standard handler.
+ * The handler is created per-request with the Cloudflare bindings.
+ */
+function createApiHandler(env: Env): {
+  handler: (request: Request) => Promise<Response>;
+  dispose: () => Promise<void>;
+} {
+  const bindingsLayer = makeCloudflareBindingsLayer(env);
+
+  // Build the full API layer with Swagger UI
+  const SwaggerLayer = HttpApiSwagger.layer({
+    path: "/docs",
+  }).pipe(Layer.provide(PostnummerApiLive));
+
+  const ApiLive = Layer.mergeAll(
+    PostnummerApiLive,
+    SwaggerLayer,
+    HttpServer.layerContext
+  ).pipe(Layer.provide(bindingsLayer));
+
+  return HttpApiBuilder.toWebHandler(ApiLive);
+}
 
 // =============================================================================
 // Request Handler
 // =============================================================================
 
 /**
- * Handle an incoming HTTP request using the Effect pipeline.
+ * Handle an incoming HTTP request.
  *
- * This is the core function that:
- * 1. Constructs the CloudflareBindings Layer from the Worker's env
- * 2. Converts the web Request to an Effect HttpServerRequest
- * 3. Runs the HttpApp with the request and bindings provided
- * 4. Converts the HttpServerResponse to a web Response
- *
- * The pipeline:
- * - httpApp produces the HttpApp (Effect<Response, E, R | Request>)
- * - Effect.flatMap runs the app
- * - Effect.provideService injects the HttpServerRequest
- * - Effect.provide injects the CloudflareBindings Layer
- * - Effect.runPromise executes and returns Promise<HttpServerResponse>
- * - HttpServerResponse.toWeb converts to web Response
+ * Routing strategy:
+ * 1. HTML routes (/, /map) → HttpRouter
+ * 2. API routes (/lookup, /polygon, /cleanup, /docs) → HttpApi
  *
  * @param request - The incoming web Request from Cloudflare
  * @param env - The Cloudflare Worker environment bindings
  * @returns Promise<Response> - The web Response to send back
  */
 async function handleRequest(request: Request, env: Env): Promise<Response> {
-  // Step 1: Construct the Layer with Cloudflare bindings
   const bindingsLayer = makeCloudflareBindingsLayer(env);
 
-  // Step 2: Build the program that:
-  // - Gets the HttpApp from our router
-  // - Runs it to get an HttpServerResponse
-  const program = pipe(
-    httpApp,
-    Effect.flatMap((app) => app),
-    // Provide the incoming request as an Effect service
-    Effect.provideService(
-      HttpServerRequest.HttpServerRequest,
-      HttpServerRequest.fromWeb(request)
-    ),
-    // Provide the Cloudflare bindings Layer
-    Effect.provide(bindingsLayer),
-    // Handle Scope for resource cleanup
-    Effect.scoped
-  );
+  // Try HTML routes first (faster for static pages)
+  const htmlResponse = await handleHtmlRequest(request, bindingsLayer);
+  if (htmlResponse) {
+    return htmlResponse;
+  }
 
-  // Step 3: Run the Effect to get HttpServerResponse
-  const response = await Effect.runPromise(program);
-
-  // Step 4: Convert HttpServerResponse to web Response
-  // HttpServerResponse.toWeb handles all body types and streaming
-  return HttpServerResponse.toWeb(response);
+  // Handle API routes
+  const { handler, dispose } = createApiHandler(env);
+  try {
+    return await handler(request);
+  } finally {
+    await dispose();
+  }
 }
 
 // =============================================================================
