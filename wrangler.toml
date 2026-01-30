@@ -14,3 +14,7 @@ namespace_id = "1001"
 [ratelimits.simple]
 limit = 60
 period = 60
+
+[observability]
+enabled = true
+head_sampling_rate = 0.1
