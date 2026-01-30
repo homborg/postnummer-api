@@ -13,8 +13,7 @@
  * - Schema.optional() makes fields optional
  * - Schema.decodeUnknown() parses and validates data
  *
- * Note: @effect/schema is deprecated but still works. Schema is now
- * available directly from the main "effect" package.
+ * Schema is available directly from the main "effect" package.
  */
 
 import { Schema } from "effect";

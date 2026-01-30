@@ -11,9 +11,6 @@ importers:
       '@effect/platform':
         specifier: ^0.94.2
         version: 0.94.2(effect@3.19.15)
-      '@effect/schema':
-        specifier: ^0.75.5
-        version: 0.75.5(effect@3.19.15)
       '@elithrar/workers-hono-rate-limit':
         specifier: ^0.5.1
         version: 0.5.1(hono@4.11.7)
@@ -90,12 +87,6 @@ packages:
     resolution: {integrity: sha512-85vdwpnK4oH/rJ3EuX/Gi2Hkt+K4HvXWr9bxCuqvty9hxyEcRxkJcqTesYrcVoQB6aULb1Za2B0MKoTbvffB3Q==}
     peerDependencies:
       effect: ^3.19.15
-
-  '@effect/schema@0.75.5':
-    resolution: {integrity: sha512-TQInulTVCuF+9EIbJpyLP6dvxbQJMphrnRqgexm/Ze39rSjfhJuufF7XvU3SxTgg3HnL7B/kpORTJbHhlE6thw==}
-    deprecated: this package has been merged into the main effect package
-    peerDependencies:
-      effect: ^3.9.2
 
   '@elithrar/workers-hono-rate-limit@0.5.1':
     resolution: {integrity: sha512-DKOxeQxyIHuVnD7fqWUhg2KxFchjUCnbmWmrXY/9jnAN67C1s7k2ABvKI4Iavv7D0Pt08tbMOKB1fLAb3wioBw==}
@@ -625,11 +616,6 @@ snapshots:
       find-my-way-ts: 0.1.6
       msgpackr: 1.11.8
       multipasta: 0.2.7
-
-  '@effect/schema@0.75.5(effect@3.19.15)':
-    dependencies:
-      effect: 3.19.15
-      fast-check: 3.23.2
 
   '@elithrar/workers-hono-rate-limit@0.5.1(hono@4.11.7)':
     dependencies:
