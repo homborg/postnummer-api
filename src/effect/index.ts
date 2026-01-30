@@ -8,12 +8,13 @@
  * - HttpApi (api.ts): JSON API endpoints with OpenAPI/Swagger
  *   - GET /lookup - coordinates to postal code
  *   - GET /polygon/:postalCode - GeoJSON geometry
- *   - GET /cleanup - cache cleanup
  *   - GET /docs - Swagger UI (auto-generated)
  *
  * - HttpRouter (routes.ts): HTML pages
  *   - GET / - API documentation homepage
  *   - GET /map - Map visualization page
+ *
+ * - Scheduled handler: Cache cleanup (cron-triggered)
  *
  * Key Effect Patterns for Cloudflare Workers:
  *
@@ -26,7 +27,11 @@
  *
  * 3. Routing strategy
  *    HTML routes (/, /map) go to HttpRouter.
- *    API routes (/lookup, /polygon, /cleanup, /docs) go to HttpApi.
+ *    API routes (/lookup, /polygon, /docs) go to HttpApi.
+ *
+ * 4. Scheduled handler
+ *    Cloudflare cron triggers call the scheduled() handler directly.
+ *    Used for periodic cache cleanup without HTTP exposure.
  */
 
 import { Effect, Layer, pipe } from "effect";
@@ -47,6 +52,7 @@ import {
   makeCloudflareBindingsLayer,
   type Env,
 } from "./bindings";
+import { cleanupExpired } from "./cache";
 
 // =============================================================================
 // HTML Router Handler
@@ -162,18 +168,50 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 }
 
 // =============================================================================
+// Scheduled Handler (Cron Cleanup)
+// =============================================================================
+
+/**
+ * Handle scheduled events (cron triggers).
+ *
+ * Cloudflare cron triggers call this handler directly - it's an internal
+ * event, not an HTTP request, so no authentication is needed.
+ *
+ * @param _event - The scheduled event (unused, contains cron metadata)
+ * @param env - The Cloudflare Worker environment bindings
+ * @param ctx - The execution context for waitUntil
+ */
+async function handleScheduled(
+  _event: ScheduledEvent,
+  env: Env,
+  ctx: ExecutionContext
+): Promise<void> {
+  const bindingsLayer = makeCloudflareBindingsLayer(env);
+
+  const program = pipe(
+    cleanupExpired,
+    Effect.tap((deleted) =>
+      Effect.log(`Cache cleanup complete: ${deleted} expired entries removed`)
+    ),
+    Effect.catchTag("CacheError", (e) =>
+      Effect.logError(`Cache cleanup failed: ${e.message}`)
+    ),
+    Effect.provide(bindingsLayer)
+  );
+
+  ctx.waitUntil(Effect.runPromise(program));
+}
+
+// =============================================================================
 // Worker Export
 // =============================================================================
 
 /**
- * Export the Cloudflare Worker default fetch handler.
+ * Export the Cloudflare Worker handlers.
  *
- * Cloudflare Workers expect a default export with a fetch method:
- * ```typescript
- * export default {
- *   async fetch(request: Request, env: Env): Promise<Response> { ... }
- * }
- * ```
+ * Cloudflare Workers expect a default export with handler methods:
+ * - fetch: HTTP request handler
+ * - scheduled: Cron trigger handler
  *
  * The env parameter contains all bindings defined in wrangler.toml:
  * - DB: D1Database for caching
@@ -182,5 +220,13 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     return handleRequest(request, env);
+  },
+
+  async scheduled(
+    event: ScheduledEvent,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<void> {
+    return handleScheduled(event, env, ctx);
   },
 };

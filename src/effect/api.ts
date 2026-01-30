@@ -18,9 +18,9 @@
  * Only JSON endpoints are defined here:
  * - GET /lookup - coordinates to postal code lookup
  * - GET /polygon/:postalCode - GeoJSON polygon for a postal code
- * - GET /cleanup - cache cleanup
  *
  * HTML endpoints (/, /map) remain on the existing HttpRouter.
+ * Cache cleanup is handled by a scheduled cron trigger (see index.ts).
  */
 
 import {
@@ -41,7 +41,6 @@ import {
   LookupResponseSchema,
   LookupResponse,
   GeoJSONGeometrySchema,
-  CleanupResponseSchema,
   BadRequestSchema,
   NotFoundErrorSchema,
   InternalErrorSchema,
@@ -49,7 +48,7 @@ import {
   PolygonQueryParamsSchema,
 } from "./schemas";
 import { findPostalCode, findPolygonByPostalCode } from "./geo";
-import { findInCache, saveToCache, cleanupExpired, findGeometryByPostalCode } from "./cache";
+import { findInCache, saveToCache, findGeometryByPostalCode } from "./cache";
 import { reverseGeocode } from "./nominatim";
 import geojson from "../postnumre";
 
@@ -99,25 +98,11 @@ const polygonEndpoint = HttpApiEndpoint.get("polygon")`/polygon/${postalCodePara
   );
 
 /**
- * Cleanup endpoint - GET /cleanup
- */
-const cleanupEndpoint = HttpApiEndpoint.get("cleanup", "/cleanup")
-  .addSuccess(CleanupResponseSchema)
-  .addError(InternalErrorSchema, { status: 500 })
-  .annotate(OpenApi.Summary, "Clean up expired cache entries")
-  .annotate(
-    OpenApi.Description,
-    "Removes expired entries from the D1 cache. " +
-      "Can be called by a cron trigger for periodic cleanup."
-  );
-
-/**
  * Main API group for postal code operations
  */
 const postalCodeGroup = HttpApiGroup.make("postalCode")
   .add(lookupEndpoint)
   .add(polygonEndpoint)
-  .add(cleanupEndpoint)
   .annotate(OpenApi.Title, "Postal Code API");
 
 /**
@@ -335,17 +320,6 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
                 error: "Polygon not found",
               } satisfies typeof NotFoundErrorSchema.Type);
             }),
-            Effect.catchTag("CacheError", (e) =>
-              Effect.fail({
-                error: e.message,
-              } satisfies typeof InternalErrorSchema.Type)
-            )
-          )
-        )
-        .handle("cleanup", () =>
-          pipe(
-            cleanupExpired,
-            Effect.map((deleted) => ({ deleted })),
             Effect.catchTag("CacheError", (e) =>
               Effect.fail({
                 error: e.message,
