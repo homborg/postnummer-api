@@ -87,3 +87,15 @@ export function pointInGeometry(
   const isMulti = geometry.type === "MultiPolygon";
   return pointInMultiPolygon(point, geometry.coordinates, isMulti);
 }
+
+export function findPolygonByPostalCode(
+  postalCode: string,
+  geojson: FeatureCollection
+): Feature["geometry"] | null {
+  for (const feature of geojson.features) {
+    if (feature.properties.postnummer === postalCode) {
+      return feature.geometry;
+    }
+  }
+  return null;
+}

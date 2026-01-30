@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { rateLimit } from "@elithrar/workers-hono-rate-limit";
-import { findPostalCode } from "./geo";
+import { findPostalCode, findPolygonByPostalCode } from "./geo";
 import geojson from "./postnumre";
 import { findInCache, saveToCache, cleanupExpired } from "./cache";
 import { reverseGeocode } from "./nominatim";
@@ -25,6 +25,33 @@ app.get("/", (c) => {
 
 app.get("/map", (c) => {
   return c.html(mapHtml);
+});
+
+app.get("/polygon/:postalCode", async (c) => {
+  const postalCode = c.req.param("postalCode");
+
+  // Try Danish embedded data first
+  const dkPolygon = findPolygonByPostalCode(postalCode, geojson);
+  if (dkPolygon) {
+    return c.json(dkPolygon, 200, {
+      "Content-Type": "application/geo+json",
+    });
+  }
+
+  // Try D1 cache for non-Danish postal codes
+  const cached = await c.env.DB.prepare(
+    "SELECT geometry FROM postal_cache WHERE postal_code = ? LIMIT 1"
+  )
+    .bind(postalCode)
+    .first<{ geometry: string }>();
+
+  if (cached?.geometry) {
+    return c.json(JSON.parse(cached.geometry), 200, {
+      "Content-Type": "application/geo+json",
+    });
+  }
+
+  return c.json({ error: "Polygon not found" }, 404);
 });
 
 app.get("/lookup", async (c) => {

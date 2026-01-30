@@ -104,29 +104,23 @@
         });
       
       async function fetchPolygon(lat, lng, map, postalCode, country) {
-        // Search for the postal code area polygon specifically
         try {
-          const query = encodeURIComponent(`${postalCode}, ${country}`);
-          const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=jsonv2&polygon_geojson=1&limit=1`;
-          const res = await fetch(url, {
-            headers: { 'User-Agent': 'PostalCodeAPI/1.0' }
-          });
-          const results = await res.json();
+          const res = await fetch(`/polygon/${encodeURIComponent(postalCode)}`);
+          if (!res.ok) return;
           
-          if (results.length > 0 && results[0].geojson) {
-            const polygon = L.geoJSON(results[0].geojson, {
-              style: {
-                color: '#3b82f6',
-                weight: 2,
-                fillColor: '#3b82f6',
-                fillOpacity: 0.15
-              }
-            }).addTo(map);
-            
-            // Fit map to show both marker and polygon
-            const bounds = polygon.getBounds();
-            map.fitBounds(bounds, { padding: [50, 50] });
-          }
+          const geometry = await res.json();
+          const polygon = L.geoJSON(geometry, {
+            style: {
+              color: '#3b82f6',
+              weight: 2,
+              fillColor: '#3b82f6',
+              fillOpacity: 0.15
+            }
+          }).addTo(map);
+          
+          // Fit map to show both marker and polygon
+          const bounds = polygon.getBounds();
+          map.fitBounds(bounds, { padding: [50, 50] });
         } catch (e) {
           // Polygon fetch is optional, don't show error
           console.log('Could not fetch polygon:', e);
