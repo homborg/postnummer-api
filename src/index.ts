@@ -46,7 +46,8 @@ app.get("/lookup", async (c) => {
     return c.json({ error: "Coordinates out of range" }, 400);
   }
 
-  const coordinatesUrl = buildCoordinatesUrl(lat, lng);
+  const baseUrl = new URL(c.req.url).origin;
+  const coordinatesUrl = buildCoordinatesUrl(lat, lng, baseUrl);
 
   // Helper to set cache headers
   const setCacheHeaders = (source: "local" | "cache" | "nominatim") => {

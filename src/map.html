@@ -97,24 +97,24 @@
           marker.bindPopup(`<b>${data.postalCode} ${data.city}</b><br>${data.country}`).openPopup();
           
           // Fetch polygon from Nominatim for visualization
-          fetchPolygon(lat, lng, map);
+          fetchPolygon(lat, lng, map, data.postalCode, data.country);
         })
         .catch(err => {
           document.getElementById('loading').innerHTML = `<div class="error">Failed to load: ${err.message}</div>`;
         });
       
-      async function fetchPolygon(lat, lng, map) {
-        // For non-local sources, we can try to get the polygon from Nominatim directly
-        // This is a separate request to show the postal code boundary
+      async function fetchPolygon(lat, lng, map, postalCode, country) {
+        // Search for the postal code area polygon specifically
         try {
-          const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&polygon_geojson=1`;
+          const query = encodeURIComponent(`${postalCode}, ${country}`);
+          const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=jsonv2&polygon_geojson=1&limit=1`;
           const res = await fetch(url, {
             headers: { 'User-Agent': 'PostalCodeAPI/1.0' }
           });
-          const data = await res.json();
+          const results = await res.json();
           
-          if (data.geojson) {
-            const polygon = L.geoJSON(data.geojson, {
+          if (results.length > 0 && results[0].geojson) {
+            const polygon = L.geoJSON(results[0].geojson, {
               style: {
                 color: '#3b82f6',
                 weight: 2,
