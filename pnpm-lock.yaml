@@ -11,15 +11,9 @@ importers:
       '@effect/platform':
         specifier: ^0.94.2
         version: 0.94.2(effect@3.19.15)
-      '@elithrar/workers-hono-rate-limit':
-        specifier: ^0.5.1
-        version: 0.5.1(hono@4.11.7)
       effect:
         specifier: ^3.19.15
         version: 3.19.15
-      hono:
-        specifier: ^4.7.0
-        version: 4.11.7
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20250121.0
@@ -87,11 +81,6 @@ packages:
     resolution: {integrity: sha512-85vdwpnK4oH/rJ3EuX/Gi2Hkt+K4HvXWr9bxCuqvty9hxyEcRxkJcqTesYrcVoQB6aULb1Za2B0MKoTbvffB3Q==}
     peerDependencies:
       effect: ^3.19.15
-
-  '@elithrar/workers-hono-rate-limit@0.5.1':
-    resolution: {integrity: sha512-DKOxeQxyIHuVnD7fqWUhg2KxFchjUCnbmWmrXY/9jnAN67C1s7k2ABvKI4Iavv7D0Pt08tbMOKB1fLAb3wioBw==}
-    peerDependencies:
-      hono: '>=4.0.0'
 
   '@emnapi/runtime@1.8.1':
     resolution: {integrity: sha512-mehfKSMWjjNol8659Z8KxEMrdSJDDot5SXMq00dM8BN4o+CLNXQ0xH2V7EchNHV4RmbZLmmPdEaXZc5H2FXmDg==}
@@ -482,10 +471,6 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  hono@4.11.7:
-    resolution: {integrity: sha512-l7qMiNee7t82bH3SeyUCt9UF15EVmaBvsppY2zQtrbIhl/yzBTny+YUxsVjSjQ6gaqaeVtZmGocom8TzBlA4Yw==}
-    engines: {node: '>=16.9.0'}
-
   kleur@4.1.5:
     resolution: {integrity: sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==}
     engines: {node: '>=6'}
@@ -616,10 +601,6 @@ snapshots:
       find-my-way-ts: 0.1.6
       msgpackr: 1.11.8
       multipasta: 0.2.7
-
-  '@elithrar/workers-hono-rate-limit@0.5.1(hono@4.11.7)':
-    dependencies:
-      hono: 4.11.7
 
   '@emnapi/runtime@1.8.1':
     dependencies:
@@ -895,8 +876,6 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
-
-  hono@4.11.7: {}
 
   kleur@4.1.5: {}
 
