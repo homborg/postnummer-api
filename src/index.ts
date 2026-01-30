@@ -41,28 +41,37 @@ app.get("/lookup", async (c) => {
     return c.json({ error: "Coordinates out of range" }, 400);
   }
 
+  const coordinatesUrl = buildCoordinatesUrl(lat, lng);
+
+  // Helper to set cache headers
+  const setCacheHeaders = (source: "local" | "cache" | "nominatim") => {
+    const isHit = source === "local" || source === "cache";
+    c.header("X-Cache", isHit ? "HIT" : "MISS");
+    c.header("X-Cache-Source", source);
+  };
+
   // 1. Try Denmark local data first (fast, accurate)
   const isDenmark = lat >= 54.5 && lat <= 58 && lng >= 8 && lng <= 15.5;
   if (isDenmark) {
     const dkResult = findPostalCode(lat, lng, geojson);
     if (dkResult) {
+      setCacheHeaders("local");
       const result: PostalCodeResponse = {
         postalCode: dkResult.postnummer,
         city: dkResult.navn,
         country: "Denmark",
         source: "local",
         mapUrl: buildMapUrl(dkResult.postnummer, dkResult.navn, "Denmark"),
-        coordinatesUrl: buildCoordinatesUrl(lat, lng),
+        coordinatesUrl,
       };
       return c.json(result);
     }
   }
 
-  const coordinatesUrl = buildCoordinatesUrl(lat, lng);
-
   // 2. Try D1 cache
   const cached = await findInCache(c.env.DB, lat, lng);
   if (cached) {
+    setCacheHeaders("cache");
     return c.json({ ...cached, coordinatesUrl });
   }
 
@@ -85,6 +94,7 @@ app.get("/lookup", async (c) => {
     }
   }
 
+  setCacheHeaders("nominatim");
   return c.json({ ...nominatimResult.result, coordinatesUrl });
 });
 

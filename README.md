@@ -17,9 +17,15 @@ Response:
   "postalCode": "1550",
   "city": "København V",
   "country": "Denmark",
-  "source": "local"
+  "source": "local",
+  "mapUrl": { "google": "...", "osm": "..." },
+  "coordinatesUrl": { "google": "...", "osm": "..." }
 }
 ```
+
+Response headers:
+- `X-Cache: HIT` or `MISS` (HIT for local/cache, MISS for nominatim)
+- `X-Cache-Source: local | cache | nominatim`
 
 ### Source values
 - `local` - Denmark polygons (embedded data)
