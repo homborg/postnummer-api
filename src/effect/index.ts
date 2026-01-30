@@ -16,6 +16,8 @@
  *
  * - Scheduled handler: Cache cleanup (cron-triggered)
  *
+ * - Rate limiting: Cloudflare Rate Limiting binding enforces request limits
+ *
  * Key Effect Patterns for Cloudflare Workers:
  *
  * 1. HttpApiBuilder.toWebHandler - Converting HttpApi to web handler
@@ -32,6 +34,10 @@
  * 4. Scheduled handler
  *    Cloudflare cron triggers call the scheduled() handler directly.
  *    Used for periodic cache cleanup without HTTP exposure.
+ *
+ * 5. Rate limiting
+ *    API routes are rate limited using Cloudflare's Rate Limiting binding.
+ *    Returns 429 with Retry-After header when limit is exceeded.
  */
 
 import { Effect, Layer, pipe } from "effect";
@@ -135,15 +141,69 @@ function createApiHandler(env: Env): {
 }
 
 // =============================================================================
+// Rate Limiting
+// =============================================================================
+
+/**
+ * Check rate limit for the request.
+ *
+ * Uses the client IP address (from CF-Connecting-IP header) as the rate limit key.
+ * The rate limiter is configured in wrangler.toml with limit and period settings.
+ *
+ * @param request - The incoming request
+ * @param env - The Cloudflare Worker environment
+ * @returns Response with 429 status if rate limited, null otherwise
+ */
+async function checkRateLimit(
+  request: Request,
+  env: Env
+): Promise<Response | null> {
+  const rateLimiter = env.RATE_LIMITER;
+
+  // Get client IP from Cloudflare header (falls back to "unknown" if not available)
+  const clientIP = request.headers.get("CF-Connecting-IP") ?? "unknown";
+
+  try {
+    const { success } = await rateLimiter.limit({ key: clientIP });
+
+    if (!success) {
+      // Rate limit exceeded - return 429 Too Many Requests
+      // The period is configured in wrangler.toml (60 seconds)
+      const retryAfter = 60;
+
+      return new Response(
+        JSON.stringify({
+          error: "Too many requests. Please try again later.",
+          retryAfter,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": String(retryAfter),
+          },
+        }
+      );
+    }
+  } catch (error) {
+    // On rate limiter error, log and allow the request (fail open)
+    console.error("[Rate Limit] Error checking rate limit:", error);
+  }
+
+  return null;
+}
+
+// =============================================================================
 // Request Handler
 // =============================================================================
 
 /**
  * Handle an incoming HTTP request.
  *
- * Routing strategy:
- * 1. HTML routes (/, /map) → HttpRouter
- * 2. API routes (/lookup, /polygon, /cleanup, /docs) → HttpApi
+ * Request flow:
+ * 1. Check rate limit for API routes
+ * 2. HTML routes (/, /map) → HttpRouter (not rate limited)
+ * 3. API routes (/lookup, /polygon, /docs) → HttpApi (rate limited)
  *
  * @param request - The incoming web Request from Cloudflare
  * @param env - The Cloudflare Worker environment bindings
@@ -151,11 +211,20 @@ function createApiHandler(env: Env): {
  */
 async function handleRequest(request: Request, env: Env): Promise<Response> {
   const bindingsLayer = makeCloudflareBindingsLayer(env);
+  const url = new URL(request.url);
 
-  // Try HTML routes first (faster for static pages)
+  // Try HTML routes first (faster for static pages, not rate limited)
   const htmlResponse = await handleHtmlRequest(request, bindingsLayer);
   if (htmlResponse) {
     return htmlResponse;
+  }
+
+  // Rate limit API routes only (not /docs for better developer experience)
+  if (url.pathname !== "/docs") {
+    const rateLimitResponse = await checkRateLimit(request, env);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
   }
 
   // Handle API routes

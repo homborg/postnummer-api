@@ -287,3 +287,13 @@ export const BadGatewaySchema = Schema.Struct({
 }).annotations({ identifier: "BadGateway" });
 
 export type BadGateway = typeof BadGatewaySchema.Type;
+
+/**
+ * Too many requests error (429) - for rate limit exceeded
+ */
+export const TooManyRequestsSchema = Schema.Struct({
+  error: Schema.String,
+  retryAfter: Schema.Number,
+}).annotations({ identifier: "TooManyRequests" });
+
+export type TooManyRequests = typeof TooManyRequestsSchema.Type;
