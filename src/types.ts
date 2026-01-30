@@ -65,4 +65,5 @@ export interface NominatimResponse {
 
 export interface Env {
   DB: D1Database;
+  RATE_LIMITER: RateLimit;
 }

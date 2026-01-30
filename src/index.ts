@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { rateLimit } from "@elithrar/workers-hono-rate-limit";
 import { findPostalCode } from "./geo";
 import geojson from "./postnumre";
 import { findInCache, saveToCache, cleanupExpired } from "./cache";
@@ -9,6 +10,11 @@ import { Env, PostalCodeResponse, buildMapUrl, buildCoordinatesUrl } from "./typ
 const app = new Hono<{ Bindings: Env }>();
 
 app.use("*", cors());
+
+app.use("/lookup", async (c, next) => {
+  const key = c.req.header("cf-connecting-ip") || "unknown";
+  return rateLimit(c.env.RATE_LIMITER, () => key)(c, next);
+});
 
 import indexHtml from "./index.html";
 

@@ -7,3 +7,10 @@ binding = "DB"
 database_name = "postal-cache"
 database_id = "3d093002-bf3a-43ad-bf01-3983dce14a63"
 migrations_dir = "migrations"
+
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+[ratelimits.simple]
+limit = 60
+period = 60

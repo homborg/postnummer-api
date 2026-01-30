@@ -56,6 +56,10 @@ pnpm dev
 pnpm deploy
 ```
 
+## Rate Limiting
+
+The `/lookup` endpoint is rate limited to **60 requests per minute per IP** using Cloudflare's native [Rate Limiting binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/). Exceeding the limit returns HTTP 429.
+
 ## Data Sources
 
 - **Denmark**: Postal code boundaries from [Data-Science.dk](https://data-science.dk/) (WGS84 GeoJSON)

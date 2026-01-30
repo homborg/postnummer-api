@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@elithrar/workers-hono-rate-limit':
+        specifier: ^0.5.1
+        version: 0.5.1(hono@4.11.7)
       hono:
         specifier: ^4.7.0
         version: 4.11.7
@@ -73,6 +76,11 @@ packages:
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
     engines: {node: '>=12'}
+
+  '@elithrar/workers-hono-rate-limit@0.5.1':
+    resolution: {integrity: sha512-DKOxeQxyIHuVnD7fqWUhg2KxFchjUCnbmWmrXY/9jnAN67C1s7k2ABvKI4Iavv7D0Pt08tbMOKB1fLAb3wioBw==}
+    peerDependencies:
+      hono: '>=4.0.0'
 
   '@emnapi/runtime@1.8.1':
     resolution: {integrity: sha512-mehfKSMWjjNol8659Z8KxEMrdSJDDot5SXMq00dM8BN4o+CLNXQ0xH2V7EchNHV4RmbZLmmPdEaXZc5H2FXmDg==}
@@ -530,6 +538,10 @@ snapshots:
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
+
+  '@elithrar/workers-hono-rate-limit@0.5.1(hono@4.11.7)':
+    dependencies:
+      hono: 4.11.7
 
   '@emnapi/runtime@1.8.1':
     dependencies:
