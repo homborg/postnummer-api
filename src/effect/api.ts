@@ -32,10 +32,9 @@ import {
 } from "@effect/platform";
 import { Effect, Layer, Option, pipe, Schema } from "effect";
 import { OpenApi } from "@effect/platform";
+import * as HttpServerRequest from "@effect/platform/HttpServerRequest";
+import * as HttpServerResponse from "@effect/platform/HttpServerResponse";
 
-import {
-  PostalCodeNotFoundError,
-} from "./errors";
 import {
   Latitude,
   Longitude,
@@ -47,9 +46,10 @@ import {
   NotFoundErrorSchema,
   InternalErrorSchema,
   BadGatewaySchema,
+  PolygonQueryParamsSchema,
 } from "./schemas";
 import { findPostalCode, findPolygonByPostalCode } from "./geo";
-import { findInCache, saveToCache, cleanupExpired, findGeometryByPostalCodeOnly } from "./cache";
+import { findInCache, saveToCache, cleanupExpired, findGeometryByPostalCode } from "./cache";
 import { reverseGeocode } from "./nominatim";
 import geojson from "../postnumre";
 
@@ -85,12 +85,16 @@ const lookupEndpoint = HttpApiEndpoint.get("lookup", "/lookup")
 const postalCodeParam = HttpApiSchema.param("postalCode", Schema.String);
 
 const polygonEndpoint = HttpApiEndpoint.get("polygon")`/polygon/${postalCodeParam}`
+  .setUrlParams(PolygonQueryParamsSchema)
   .addSuccess(GeoJSONGeometrySchema)
+  .addError(BadRequestSchema, { status: 400 })
   .addError(NotFoundErrorSchema, { status: 404 })
   .annotate(OpenApi.Summary, "Get polygon geometry for a postal code")
   .annotate(
     OpenApi.Description,
     "Returns GeoJSON polygon geometry for the given postal code. " +
+      "Provide the country query parameter (ISO-3166 alpha-2). " +
+      "If omitted, the service falls back to request.cf.country when available. " +
       "Danish postal codes use embedded data; others use cached Nominatim data."
   );
 
@@ -284,22 +288,46 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
             )
           )
         )
-        .handle("polygon", ({ path: { postalCode } }) =>
+        .handle("polygon", ({ path: { postalCode }, urlParams }) =>
           pipe(
             Effect.gen(function* () {
+              const request = yield* HttpServerRequest.HttpServerRequest;
+              const cfCountry = (request.source as Request & { cf?: { country?: string } })
+                .cf?.country;
+              const countryCode = (urlParams.country ?? cfCountry)?.trim().toUpperCase();
+
+              if (!countryCode) {
+                return yield* Effect.fail({
+                  error: "Country code is required for polygon lookup",
+                } satisfies typeof BadRequestSchema.Type);
+              }
+
               // Try Danish embedded data first
-              const dkPolygon = yield* findPolygonByPostalCode(
-                postalCode,
-                geojson
-              );
-              if (Option.isSome(dkPolygon)) {
-                return dkPolygon.value as { type: string; coordinates: unknown };
+              if (countryCode === "DK") {
+                const dkPolygon = yield* findPolygonByPostalCode(
+                  postalCode,
+                  geojson
+                );
+                if (Option.isSome(dkPolygon)) {
+                  return HttpServerResponse.unsafeJson(dkPolygon.value, {
+                    headers: {
+                      vary: "cf-country,country",
+                    },
+                  });
+                }
               }
 
               // Try D1 cache for non-Danish postal codes
-              const cached = yield* findGeometryByPostalCodeOnly(postalCode);
+              const cached = yield* findGeometryByPostalCode(
+                postalCode,
+                countryCode
+              );
               if (Option.isSome(cached)) {
-                return cached.value as { type: string; coordinates: unknown };
+                return HttpServerResponse.unsafeJson(cached.value, {
+                  headers: {
+                    vary: "cf-country,country",
+                  },
+                });
               }
 
               // Polygon not found

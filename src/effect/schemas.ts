@@ -59,6 +59,22 @@ export const Coordinates = Schema.Struct({
 export type Coordinates = typeof Coordinates.Type;
 
 // =============================================================================
+// Polygon Query Params Schema
+// =============================================================================
+
+/**
+ * Query params for the /polygon endpoint.
+ *
+ * Country is optional at the schema level because we allow fallback to
+ * request.cf.country when the query param is not provided.
+ */
+export const PolygonQueryParamsSchema = Schema.Struct({
+  country: Schema.optional(Schema.String),
+}).annotations({ identifier: "PolygonQueryParams" });
+
+export type PolygonQueryParams = typeof PolygonQueryParamsSchema.Type;
+
+// =============================================================================
 // MapUrls Schema
 // =============================================================================
 
