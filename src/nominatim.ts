@@ -6,7 +6,7 @@ const USER_AGENT = "PostalCodeAPI/1.0 (https://github.com/example/postnummer-api
 export async function reverseGeocode(
   lat: number,
   lng: number
-): Promise<{ result: PostalCodeResult; geometry?: object } | null> {
+): Promise<{ result: PostalCodeResult; geometry: object | undefined } | null> {
   const url = new URL("/reverse", NOMINATIM_BASE);
   url.searchParams.set("lat", lat.toString());
   url.searchParams.set("lon", lng.toString());

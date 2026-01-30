@@ -9,7 +9,10 @@
     "types": ["@cloudflare/workers-types"],
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "noEmit": true
+    "noEmit": true,
+    // Effect TS recommended settings
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true
   },
   "include": ["src/**/*"]
 }

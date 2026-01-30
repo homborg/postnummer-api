@@ -89,7 +89,10 @@ function computeBoundingBox(
   let maxLng = -Infinity;
 
   const processRing = (ring: number[][]) => {
-    for (const [lng, lat] of ring) {
+    for (const coord of ring) {
+      const lng = coord[0];
+      const lat = coord[1];
+      if (lng === undefined || lat === undefined) continue;
       minLat = Math.min(minLat, lat);
       maxLat = Math.max(maxLat, lat);
       minLng = Math.min(minLng, lng);
@@ -99,10 +102,12 @@ function computeBoundingBox(
 
   if (isMulti) {
     for (const polygon of coordinates as number[][][][]) {
-      processRing(polygon[0]);
+      const ring = polygon[0];
+      if (ring) processRing(ring);
     }
   } else {
-    processRing((coordinates as number[][][])[0]);
+    const ring = (coordinates as number[][][])[0];
+    if (ring) processRing(ring);
   }
 
   return { minLat, maxLat, minLng, maxLng };

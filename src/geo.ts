@@ -28,10 +28,14 @@ function pointInPolygon(
   let inside = false;
 
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i][0];
-    const yi = polygon[i][1];
-    const xj = polygon[j][0];
-    const yj = polygon[j][1];
+    const pi = polygon[i];
+    const pj = polygon[j];
+    if (!pi || !pj) continue;
+    const xi = pi[0];
+    const yi = pi[1];
+    const xj = pj[0];
+    const yj = pj[1];
+    if (xi === undefined || yi === undefined || xj === undefined || yj === undefined) continue;
 
     if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
       inside = !inside;
@@ -48,13 +52,15 @@ function pointInMultiPolygon(
 ): boolean {
   if (isMulti) {
     for (const polygon of coordinates as number[][][][]) {
-      if (pointInPolygon(point, polygon[0])) {
+      const ring = polygon[0];
+      if (ring && pointInPolygon(point, ring)) {
         return true;
       }
     }
     return false;
   } else {
-    return pointInPolygon(point, (coordinates as number[][][])[0]);
+    const ring = (coordinates as number[][][])[0];
+    return ring ? pointInPolygon(point, ring) : false;
   }
 }
 
