@@ -1,0 +1,119 @@
+{
+  "place_id": 328924512,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "way",
+  "osm_id": 575213527,
+  "lat": "40.7127395",
+  "lon": "-74.0059390",
+  "category": "amenity",
+  "type": "townhall",
+  "place_rank": 30,
+  "importance": 0.489563959518216,
+  "addresstype": "amenity",
+  "name": "New York City Hall",
+  "display_name": "New York City Hall, 260, Broadway, Tribeca, Lower Manhattan, Manhattan, New York County, New York, 10000, United States",
+  "address": {
+    "amenity": "New York City Hall",
+    "house_number": "260",
+    "road": "Broadway",
+    "neighbourhood": "Tribeca",
+    "quarter": "Lower Manhattan",
+    "suburb": "Manhattan",
+    "county": "New York County",
+    "city": "New York",
+    "state": "New York",
+    "ISO3166-2-lvl4": "US-NY",
+    "postcode": "10000",
+    "country": "United States",
+    "country_code": "us"
+  },
+  "boundingbox": [
+    "40.7124450",
+    "40.7130254",
+    "-74.0064455",
+    "-74.0055687"
+  ],
+  "geojson": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -74.0064455,
+          40.7127755
+        ],
+        [
+          -74.0063211,
+          40.7127133
+        ],
+        [
+          -74.0062755,
+          40.7127656
+        ],
+        [
+          -74.006161,
+          40.7127084
+        ],
+        [
+          -74.006179,
+          40.7126875
+        ],
+        [
+          -74.0060873,
+          40.7126412
+        ],
+        [
+          -74.0060005,
+          40.7125975
+        ],
+        [
+          -74.0059823,
+          40.7126187
+        ],
+        [
+          -74.005867,
+          40.7125612
+        ],
+        [
+          -74.0059134,
+          40.712508
+        ],
+        [
+          -74.0057875,
+          40.712445
+        ],
+        [
+          -74.0055687,
+          40.7126963
+        ],
+        [
+          -74.0058093,
+          40.7128167
+        ],
+        [
+          -74.0057897,
+          40.7128392
+        ],
+        [
+          -74.0058825,
+          40.7128854
+        ],
+        [
+          -74.0059683,
+          40.7129289
+        ],
+        [
+          -74.0059886,
+          40.7129057
+        ],
+        [
+          -74.0062278,
+          40.7130254
+        ],
+        [
+          -74.0064455,
+          40.7127755
+        ]
+      ]
+    ]
+  }
+}

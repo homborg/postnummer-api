@@ -1,0 +1,65 @@
+{
+  "place_id": 134248339,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "way",
+  "osm_id": 284493291,
+  "lat": "52.5200022",
+  "lon": "13.4050017",
+  "category": "highway",
+  "type": "secondary",
+  "place_rank": 26,
+  "importance": 0.3457604669057869,
+  "addresstype": "road",
+  "name": "Spandauer Straße",
+  "display_name": "Spandauer Straße, Spandauer Vorstadt, Mitte, Berlin, 10178, Deutschland",
+  "address": {
+    "road": "Spandauer Straße",
+    "quarter": "Spandauer Vorstadt",
+    "suburb": "Mitte",
+    "borough": "Mitte",
+    "city": "Berlin",
+    "ISO3166-2-lvl4": "DE-BE",
+    "postcode": "10178",
+    "country": "Deutschland",
+    "country_code": "de"
+  },
+  "boundingbox": [
+    "52.5193920",
+    "52.5200133",
+    "13.4049874",
+    "13.4057591"
+  ],
+  "geojson": {
+    "type": "LineString",
+    "coordinates": [
+      [
+        13.4057591,
+        52.519392
+      ],
+      [
+        13.4056745,
+        52.519518
+      ],
+      [
+        13.4051631,
+        52.5198778
+      ],
+      [
+        13.4051286,
+        52.519905
+      ],
+      [
+        13.4050528,
+        52.5199628
+      ],
+      [
+        13.4050242,
+        52.5199846
+      ],
+      [
+        13.4049874,
+        52.5200133
+      ]
+    ]
+  }
+}
