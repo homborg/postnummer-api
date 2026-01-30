@@ -70,3 +70,29 @@ The `/lookup` endpoint is rate limited to **60 requests per minute per IP** usin
 
 - **Denmark**: Postal code boundaries from [Data-Science.dk](https://data-science.dk/) (WGS84 GeoJSON)
 - **Worldwide**: [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) with polygon caching
+
+## Architecture
+
+Built with [Effect](https://effect.website/) and [@effect/platform](https://github.com/Effect-TS/effect/tree/main/packages/platform) for type-safe, functional HTTP handling.
+
+### Effect Modules
+
+```
+src/effect/
+├── index.ts      # Worker entry point (toWebHandler)
+├── routes.ts     # HttpRouter with all endpoints
+├── bindings.ts   # CloudflareBindings Context.Tag & Layer
+├── cache.ts      # D1 cache operations (Effect-wrapped)
+├── nominatim.ts  # Nominatim HTTP client (Effect-wrapped)
+├── geo.ts        # Point-in-polygon functions (Effect-wrapped)
+├── schemas.ts    # Effect Schema definitions
+└── errors.ts     # Tagged errors (Data.TaggedError)
+```
+
+### Key Patterns
+
+- **Context.Tag** for dependency injection (CloudflareBindings)
+- **Layer** for providing services at request time
+- **Effect.gen** for async pipelines with typed errors
+- **Schema** for request/response validation
+- **Option** for nullable results, **TaggedError** for failures

@@ -10,9 +10,7 @@
   },
   "dependencies": {
     "@effect/platform": "^0.94.2",
-    "@elithrar/workers-hono-rate-limit": "^0.5.1",
-    "effect": "^3.19.15",
-    "hono": "^4.7.0"
+    "effect": "^3.19.15"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250121.0",
