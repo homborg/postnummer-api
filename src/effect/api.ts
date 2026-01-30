@@ -89,17 +89,26 @@ const CleanupResponseSchema = Schema.Struct({
 }).annotations({ identifier: "CleanupResponse" });
 
 /**
- * Error response schema
+ * Distinct error schemas per HTTP status code.
+ * HttpApi requires unique schemas for each status to avoid ambiguity.
  */
-const ErrorResponseSchema = Schema.Struct({
+const BadRequestSchema = Schema.Struct({
   error: Schema.String,
-}).annotations({ identifier: "ErrorResponse" });
+}).annotations({ identifier: "BadRequest" });
 
 const NotFoundErrorSchema = Schema.Struct({
   error: Schema.String,
   lat: Schema.optional(Schema.Number),
   lng: Schema.optional(Schema.Number),
 }).annotations({ identifier: "NotFoundError" });
+
+const InternalErrorSchema = Schema.Struct({
+  error: Schema.String,
+}).annotations({ identifier: "InternalError" });
+
+const BadGatewaySchema = Schema.Struct({
+  error: Schema.String,
+}).annotations({ identifier: "BadGateway" });
 
 // =============================================================================
 // API Definition
@@ -116,10 +125,10 @@ const lookupEndpoint = HttpApiEndpoint.get("lookup", "/lookup")
     })
   )
   .addSuccess(LookupResponseSchema)
-  .addError(ErrorResponseSchema, { status: 400 })
+  .addError(BadRequestSchema, { status: 400 })
   .addError(NotFoundErrorSchema, { status: 404 })
-  .addError(ErrorResponseSchema, { status: 500 })
-  .addError(ErrorResponseSchema, { status: 502 })
+  .addError(InternalErrorSchema, { status: 500 })
+  .addError(BadGatewaySchema, { status: 502 })
   .annotate(OpenApi.Summary, "Lookup postal code by coordinates")
   .annotate(
     OpenApi.Description,
@@ -147,7 +156,7 @@ const polygonEndpoint = HttpApiEndpoint.get("polygon")`/polygon/${postalCodePara
  */
 const cleanupEndpoint = HttpApiEndpoint.get("cleanup", "/cleanup")
   .addSuccess(CleanupResponseSchema)
-  .addError(ErrorResponseSchema, { status: 500 })
+  .addError(InternalErrorSchema, { status: 500 })
   .annotate(OpenApi.Summary, "Clean up expired cache entries")
   .annotate(
     OpenApi.Description,
@@ -311,10 +320,21 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
             }),
             // Map application errors to API error schemas
             Effect.catchTag("PostalCodeNotFoundError", (e) =>
-              Effect.fail({ error: e.message, lat: e.lat, lng: e.lng })
+              Effect.fail({
+                error: e.message,
+                lat: e.lat,
+                lng: e.lng,
+              } satisfies typeof NotFoundErrorSchema.Type)
             ),
             Effect.catchTag("NominatimError", (e) =>
-              Effect.fail({ error: e.message })
+              // Use BadGateway for upstream failures, InternalError for other issues
+              e.statusCode !== undefined && e.statusCode >= 500
+                ? Effect.fail({
+                    error: e.message,
+                  } satisfies typeof BadGatewaySchema.Type)
+                : Effect.fail({
+                    error: e.message,
+                  } satisfies typeof InternalErrorSchema.Type)
             )
           )
         )
@@ -359,7 +379,9 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
             cleanupExpired,
             Effect.map((deleted) => ({ deleted })),
             Effect.catchTag("CacheError", (e) =>
-              Effect.fail({ error: e.message })
+              Effect.fail({
+                error: e.message,
+              } satisfies typeof InternalErrorSchema.Type)
             )
           )
         );
