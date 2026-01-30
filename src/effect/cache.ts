@@ -141,7 +141,15 @@ export const findInCache = (
 
     // Step 2: Check point-in-polygon for each candidate
     for (const cached of candidates.results) {
-      const geometry = JSON.parse(cached.geometry) as CacheGeometry;
+      const geometry = yield* Effect.try({
+        try: () => JSON.parse(cached.geometry) as CacheGeometry,
+        catch: (error) =>
+          new CacheError({
+            message: `Failed to parse cached geometry JSON: ${String(error)}`,
+            operation: "read",
+            cause: error,
+          }),
+      });
       if (pointInGeometry(lat, lng, geometry)) {
         return Option.some({
           postalCode: cached.postal_code,
@@ -305,7 +313,72 @@ export const findGeometryByPostalCode = (
       return Option.none();
     }
 
-    return Option.some(JSON.parse(result.geometry) as CacheGeometry);
+    const geometry = yield* Effect.try({
+      try: () => JSON.parse(result.geometry) as CacheGeometry,
+      catch: (error) =>
+        new CacheError({
+          message: `Failed to parse cached geometry JSON: ${String(error)}`,
+          operation: "read",
+          cause: error,
+        }),
+    });
+
+    return Option.some(geometry);
+  });
+
+// =============================================================================
+// findGeometryByPostalCodeOnly - Query by postal code without country code
+// =============================================================================
+
+/**
+ * Find cached geometry for a postal code (any country).
+ *
+ * Unlike findGeometryByPostalCode, this queries only by postal_code.
+ * Used by /polygon endpoint where country is unknown.
+ *
+ * @param postalCode - The postal code to look up
+ * @returns Effect that succeeds with Option<CacheGeometry> or fails with CacheError
+ */
+export const findGeometryByPostalCodeOnly = (
+  postalCode: string
+): Effect.Effect<Option.Option<CacheGeometry>, CacheError, CloudflareBindings> =>
+  Effect.gen(function* () {
+    const { db } = yield* CloudflareBindings;
+    const now = Math.floor(Date.now() / 1000);
+
+    const result = yield* Effect.tryPromise({
+      try: () =>
+        db
+          .prepare(
+            `SELECT geometry FROM postal_cache 
+             WHERE postal_code = ? AND expires_at > ?
+             LIMIT 1`
+          )
+          .bind(postalCode, now)
+          .first<{ geometry: string }>(),
+      catch: (error) =>
+        new CacheError({
+          message: `Failed to query geometry from cache: ${String(error)}`,
+          operation: "read",
+          cause: error,
+        }),
+    });
+
+    if (!result) {
+      return Option.none();
+    }
+
+    const geometry = yield* Effect.try({
+      try: () => JSON.parse(result.geometry) as CacheGeometry,
+      catch: (error) =>
+        new CacheError({
+          message: `Failed to parse cached geometry JSON: ${String(error)}`,
+          operation: "read",
+          cause: error,
+        }),
+    });
+
+    return Option.some(geometry);
   });
 
 // =============================================================================

@@ -42,7 +42,7 @@ import {
 } from "./errors";
 import { Latitude, Longitude, MapUrls, Source } from "./schemas";
 import { findPostalCode, findPolygonByPostalCode } from "./geo";
-import { findInCache, saveToCache, cleanupExpired } from "./cache";
+import { findInCache, saveToCache, cleanupExpired, findGeometryByPostalCodeOnly } from "./cache";
 import { reverseGeocode } from "./nominatim";
 import geojson from "../postnumre";
 
@@ -351,27 +351,21 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
               }
 
               // Try D1 cache for non-Danish postal codes
-              const cached = yield* Effect.tryPromise({
-                try: () =>
-                  db
-                    .prepare(
-                      "SELECT geometry FROM postal_cache WHERE postal_code = ? LIMIT 1"
-                    )
-                    .bind(postalCode)
-                    .first<{ geometry: string }>(),
-                catch: () => ({ error: "Failed to query cache" }),
-              });
-
-              if (cached && "geometry" in cached && cached.geometry) {
-                return JSON.parse(cached.geometry) as {
-                  type: string;
-                  coordinates: unknown;
-                };
+              const cached = yield* findGeometryByPostalCodeOnly(postalCode);
+              if (Option.isSome(cached)) {
+                return cached.value as { type: string; coordinates: unknown };
               }
 
               // Polygon not found
-              return yield* Effect.fail({ error: "Polygon not found" });
-            })
+              return yield* Effect.fail({
+                error: "Polygon not found",
+              } satisfies typeof NotFoundErrorSchema.Type);
+            }),
+            Effect.catchTag("CacheError", (e) =>
+              Effect.fail({
+                error: e.message,
+              } satisfies typeof InternalErrorSchema.Type)
+            )
           )
         )
         .handle("cleanup", () =>
