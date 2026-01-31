@@ -46,6 +46,7 @@ import {
   InternalErrorSchema,
   BadGatewaySchema,
   PolygonQueryParamsSchema,
+  CacheableGeometry,
 } from "./schemas";
 import { findPostalCode, findPolygonByPostalCode } from "./geo";
 import { findInCache, saveToCache, findGeometryByPostalCode } from "./cache";
@@ -231,26 +232,20 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
 
               // Cache the result if we have polygon geometry (ignore errors)
               // Only Polygon/MultiPolygon are cacheable; LineString/Point are not useful
-              const geom = nominatimResult.geometry;
-              if (
-                geom &&
-                (geom.type === "Polygon" || geom.type === "MultiPolygon")
-              ) {
-                yield* pipe(
+              yield* pipe(
+                Schema.decodeUnknown(CacheableGeometry)(nominatimResult.geometry),
+                Effect.flatMap((cacheableGeom) =>
                   saveToCache(
                     {
                       postalCode: nominatimResult.result.postalCode,
                       city: nominatimResult.result.city,
                       country: nominatimResult.result.countryCode,
                     },
-                    geom as {
-                      readonly type: "Polygon" | "MultiPolygon";
-                      readonly coordinates: number[][][] | number[][][][];
-                    }
-                  ),
-                  Effect.catchAll(() => Effect.void)
-                );
-              }
+                    cacheableGeom
+                  )
+                ),
+                Effect.catchAll(() => Effect.void)
+              );
 
               return respond({
                 postalCode: nominatimResult.result.postalCode,

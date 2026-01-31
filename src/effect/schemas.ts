@@ -195,6 +195,16 @@ export const NominatimGeometry = Schema.Struct({
 });
 
 /**
+ * Cacheable geometry - only Polygon/MultiPolygon can be cached for point-in-polygon lookups.
+ */
+export const CacheableGeometry = Schema.Struct({
+  type: Schema.Literal("Polygon", "MultiPolygon"),
+  coordinates: Schema.Unknown,
+});
+
+export type CacheableGeometry = typeof CacheableGeometry.Type;
+
+/**
  * Nominatim reverse geocoding response.
  * Note: lat/lon come as strings from Nominatim API, not numbers.
  */

@@ -40,7 +40,10 @@ import { Effect, Option, pipe } from "effect";
 import { CloudflareBindings } from "./bindings";
 import { CacheError } from "./errors";
 import { pointInGeometry } from "../geo";
-import type { CachedPostalCode as CachedPostalCodeType } from "./schemas";
+import type {
+  CachedPostalCode as CachedPostalCodeType,
+  CacheableGeometry,
+} from "./schemas";
 
 // =============================================================================
 // Constants
@@ -64,12 +67,10 @@ export interface CacheResult {
 }
 
 /**
- * Geometry type for caching - matches Nominatim response format.
+ * Geometry type for caching - use CacheableGeometry from schemas.
+ * Coordinates are unknown at the schema level but cast at runtime for geo operations.
  */
-export interface CacheGeometry {
-  readonly type: "Polygon" | "MultiPolygon";
-  readonly coordinates: number[][][] | number[][][][];
-}
+type CacheGeometry = CacheableGeometry;
 
 /**
  * Input for saving to cache - the postal code result to store.
@@ -143,7 +144,11 @@ export const findInCache = (
     // Step 2: Check point-in-polygon for each candidate
     for (const cached of candidates.results) {
       const geometry = yield* Effect.try({
-        try: () => JSON.parse(cached.geometry) as CacheGeometry,
+        try: () =>
+          JSON.parse(cached.geometry) as {
+            type: string;
+            coordinates: number[][][] | number[][][][];
+          },
         catch: (error) =>
           new CacheError({
             message: `Failed to parse cached geometry JSON: ${String(error)}`,
@@ -199,10 +204,8 @@ export const saveToCache = (
       "cache.country": result.country,
     });
     const { db } = yield* CloudflareBindings;
-    const bbox = computeBoundingBox(
-      geometry.coordinates,
-      geometry.type === "MultiPolygon"
-    );
+    const coords = geometry.coordinates as number[][][] | number[][][][];
+    const bbox = computeBoundingBox(coords, geometry.type === "MultiPolygon");
     const expiresAt = Math.floor(Date.now() / 1000) + CACHE_TTL_SECONDS;
 
     yield* Effect.tryPromise({
