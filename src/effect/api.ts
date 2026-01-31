@@ -277,6 +277,12 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
                     error: e.message,
                   } satisfies typeof InternalErrorSchema.Type)
             ),
+            Effect.tapError((e) =>
+              Effect.annotateCurrentSpan({
+                "error.type": "error" in e ? "api_error" : "unknown",
+                "error.message": "error" in e ? e.error : String(e),
+              })
+            ),
             Effect.withSpan("api.lookup")
           )
         )
