@@ -9,7 +9,7 @@
  * - GET /map - Map visualization page
  */
 
-import { Effect } from "effect";
+import * as Effect from "effect/Effect";
 import * as HttpRouter from "@effect/platform/HttpRouter";
 import * as HttpServerResponse from "@effect/platform/HttpServerResponse";
 

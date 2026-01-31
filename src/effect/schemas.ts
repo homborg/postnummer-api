@@ -16,7 +16,7 @@
  * Schema is available directly from the main "effect" package.
  */
 
-import { Schema } from "effect";
+import * as Schema from "effect/Schema";
 
 // =============================================================================
 // Coordinates Schema

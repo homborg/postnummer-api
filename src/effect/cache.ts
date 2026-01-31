@@ -36,7 +36,10 @@
  *    making them depend on CloudflareBindings in their Effect signature.
  */
 
-import { Effect, Option, pipe, Schema } from "effect";
+import * as Effect from "effect/Effect";
+import * as Option from "effect/Option";
+import { pipe } from "effect/Function";
+import * as Schema from "effect/Schema";
 import { CloudflareBindings } from "./bindings";
 import { CacheError } from "./errors";
 import { pointInGeometry } from "../geo";

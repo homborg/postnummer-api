@@ -47,7 +47,8 @@
  * Effect runtime.
  */
 
-import { Context, Layer } from "effect";
+import * as Context from "effect/Context";
+import * as Layer from "effect/Layer";
 
 // =============================================================================
 // Cloudflare Bindings Interface

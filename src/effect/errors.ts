@@ -35,7 +35,7 @@
  * - Pattern matching in switch statements
  */
 
-import { Data } from "effect";
+import * as Data from "effect/Data";
 
 // =============================================================================
 // PostalCodeNotFoundError

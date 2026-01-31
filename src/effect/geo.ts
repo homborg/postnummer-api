@@ -42,7 +42,9 @@
  * ```
  */
 
-import { Effect, Option, pipe } from "effect";
+import * as Effect from "effect/Effect";
+import * as Option from "effect/Option";
+import { pipe } from "effect/Function";
 import {
   findPostalCode as findPostalCodePure,
   findPolygonByPostalCode as findPolygonByPostalCodePure,

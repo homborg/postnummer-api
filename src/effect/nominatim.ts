@@ -42,12 +42,11 @@
  * - Testability: Can swap the implementation for testing
  */
 
-import { Effect, Schema, pipe } from "effect";
+import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
+import { pipe } from "effect/Function";
 import { NominatimError, PostalCodeNotFoundError } from "./errors";
-import {
-  NominatimResponse as NominatimResponseSchema,
-  type NominatimResponse,
-} from "./schemas";
+import { NominatimResponse as NominatimResponseSchema } from "./schemas";
 
 // =============================================================================
 // Constants

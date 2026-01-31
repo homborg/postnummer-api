@@ -30,7 +30,11 @@ import {
   HttpApiGroup,
   HttpApiSchema,
 } from "@effect/platform";
-import { Effect, Layer, Option, pipe, Schema } from "effect";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
+import { pipe } from "effect/Function";
+import * as Schema from "effect/Schema";
 import { OpenApi } from "@effect/platform";
 import * as HttpServerRequest from "@effect/platform/HttpServerRequest";
 import * as HttpServerResponse from "@effect/platform/HttpServerResponse";

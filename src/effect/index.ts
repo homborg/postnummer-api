@@ -40,7 +40,9 @@
  *    Returns 429 with Retry-After header when limit is exceeded.
  */
 
-import { Effect, Layer, pipe } from "effect";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import { pipe } from "effect/Function";
 import * as HttpRouter from "@effect/platform/HttpRouter";
 import * as HttpServerRequest from "@effect/platform/HttpServerRequest";
 import * as HttpServerResponse from "@effect/platform/HttpServerResponse";
@@ -48,11 +50,7 @@ import * as HttpServer from "@effect/platform/HttpServer";
 import { HttpApiBuilder, HttpApiSwagger } from "@effect/platform";
 
 import { htmlRouter } from "./routes";
-import {
-  PostnummerApi,
-  PostnummerApiLive,
-  PostalCodeGroupLive,
-} from "./api";
+import { PostnummerApiLive } from "./api";
 import {
   CloudflareBindings,
   makeCloudflareBindingsLayer,
