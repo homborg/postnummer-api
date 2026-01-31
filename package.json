@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@effect/opentelemetry": "^0.61.0",
     "@effect/platform": "^0.94.2",
+    "@opentelemetry/sdk-trace-base": "^2.5.0",
     "effect": "^3.19.15"
   },
   "devDependencies": {
