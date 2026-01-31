@@ -76,9 +76,10 @@ export interface NominatimResult {
 /**
  * Geometry type matching Nominatim's GeoJSON response.
  * Used for caching the polygon data.
+ * Note: LineString/Point are accepted from Nominatim but not useful for polygon display.
  */
 export interface NominatimGeometry {
-  readonly type: "Polygon" | "MultiPolygon";
+  readonly type: "Polygon" | "MultiPolygon" | "LineString" | "Point";
   readonly coordinates: unknown;
 }
 

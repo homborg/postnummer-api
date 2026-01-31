@@ -229,8 +229,13 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
               // Fall back to Nominatim
               const nominatimResult = yield* reverseGeocode(lat, lng);
 
-              // Cache the result if we have geometry (ignore errors)
-              if (nominatimResult.geometry) {
+              // Cache the result if we have polygon geometry (ignore errors)
+              // Only Polygon/MultiPolygon are cacheable; LineString/Point are not useful
+              const geom = nominatimResult.geometry;
+              if (
+                geom &&
+                (geom.type === "Polygon" || geom.type === "MultiPolygon")
+              ) {
                 yield* pipe(
                   saveToCache(
                     {
@@ -238,7 +243,7 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
                       city: nominatimResult.result.city,
                       country: nominatimResult.result.countryCode,
                     },
-                    nominatimResult.geometry as {
+                    geom as {
                       readonly type: "Polygon" | "MultiPolygon";
                       readonly coordinates: number[][][] | number[][][][];
                     }

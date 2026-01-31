@@ -184,10 +184,11 @@ export const NominatimAddress = Schema.Struct({
 
 /**
  * GeoJSON geometry from Nominatim.
- * Can be Polygon or MultiPolygon.
+ * Can be Polygon, MultiPolygon, LineString, or Point depending on the feature.
+ * Roads return LineString, postal areas return Polygon/MultiPolygon.
  */
 export const NominatimGeometry = Schema.Struct({
-  type: Schema.Literal("Polygon", "MultiPolygon"),
+  type: Schema.Literal("Polygon", "MultiPolygon", "LineString", "Point"),
   // coordinates is complex nested array - use Schema.Unknown and cast at runtime
   // This is pragmatic: full type would be Schema.Union of deeply nested arrays
   coordinates: Schema.Unknown,
