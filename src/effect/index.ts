@@ -59,6 +59,7 @@ import {
   type Env,
 } from "./bindings";
 import { cleanupExpired } from "./cache";
+import { TracerLive } from "./tracer";
 
 // =============================================================================
 // HTML Router Handler
@@ -117,7 +118,8 @@ const SwaggerLayer = HttpApiSwagger.layer({
 const ApiLayerBase = Layer.mergeAll(
   PostnummerApiLive,
   SwaggerLayer,
-  HttpServer.layerContext
+  HttpServer.layerContext,
+  TracerLive
 );
 
 // =============================================================================
