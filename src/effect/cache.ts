@@ -111,6 +111,7 @@ export const findInCache = (
   lng: number
 ): Effect.Effect<Option.Option<CacheResult>, CacheError, CloudflareBindings> =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan({ "cache.lat": lat, "cache.lng": lng });
     const { db } = yield* CloudflareBindings;
     const now = Math.floor(Date.now() / 1000);
 
@@ -162,7 +163,7 @@ export const findInCache = (
 
     // No candidate contained the point - cache miss
     return Option.none();
-  });
+  }).pipe(Effect.withSpan("cache.findInCache"));
 
 // =============================================================================
 // saveToCache - Store a postal code result with geometry
@@ -193,6 +194,10 @@ export const saveToCache = (
   geometry: CacheGeometry
 ): Effect.Effect<void, CacheError, CloudflareBindings> =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan({
+      "cache.postalCode": result.postalCode,
+      "cache.country": result.country,
+    });
     const { db } = yield* CloudflareBindings;
     const bbox = computeBoundingBox(
       geometry.coordinates,
@@ -227,7 +232,7 @@ export const saveToCache = (
           cause: error,
         }),
     });
-  });
+  }).pipe(Effect.withSpan("cache.saveToCache"));
 
 // =============================================================================
 // cleanupExpired - Remove expired cache entries
@@ -288,6 +293,10 @@ export const findGeometryByPostalCode = (
   countryCode: string
 ): Effect.Effect<Option.Option<CacheGeometry>, CacheError, CloudflareBindings> =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan({
+      "cache.postalCode": postalCode,
+      "cache.countryCode": countryCode,
+    });
     const { db } = yield* CloudflareBindings;
     const now = Math.floor(Date.now() / 1000);
 
@@ -324,7 +333,7 @@ export const findGeometryByPostalCode = (
     });
 
     return Option.some(geometry);
-  });
+  }).pipe(Effect.withSpan("cache.findGeometryByPostalCode"));
 
 // =============================================================================
 // findGeometryByPostalCodeOnly - Query by postal code without country code

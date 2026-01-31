@@ -169,6 +169,7 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
         .handle("lookup", ({ urlParams: { lat, lng } }) =>
           pipe(
             Effect.gen(function* () {
+              yield* Effect.annotateCurrentSpan({ "lookup.lat": lat, "lookup.lng": lng });
               const baseUrl = "";
               const coordinatesUrl = buildCoordinatesUrls(lat, lng, baseUrl);
 
@@ -270,12 +271,14 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
                 : Effect.fail({
                     error: e.message,
                   } satisfies typeof InternalErrorSchema.Type)
-            )
+            ),
+            Effect.withSpan("api.lookup")
           )
         )
         .handle("polygon", ({ path: { postalCode }, urlParams }) =>
           pipe(
             Effect.gen(function* () {
+              yield* Effect.annotateCurrentSpan({ "polygon.postalCode": postalCode });
               const request = yield* HttpServerRequest.HttpServerRequest;
               const cfCountry = (request.source as Request & { cf?: { country?: string } })
                 .cf?.country;
@@ -324,7 +327,8 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
               Effect.fail({
                 error: e.message,
               } satisfies typeof InternalErrorSchema.Type)
-            )
+            ),
+            Effect.withSpan("api.polygon")
           )
         );
     })

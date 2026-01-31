@@ -132,6 +132,7 @@ export const reverseGeocode = (
   never
 > =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan({ "nominatim.lat": lat, "nominatim.lng": lng });
     // Build the request URL with query parameters
     const url = new URL("/reverse", NOMINATIM_BASE);
     url.searchParams.set("lat", lat.toString());
@@ -231,4 +232,4 @@ export const reverseGeocode = (
       : undefined;
 
     return { result, geometry };
-  });
+  }).pipe(Effect.withSpan("nominatim.reverseGeocode"));
