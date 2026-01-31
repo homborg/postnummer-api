@@ -232,4 +232,12 @@ export const reverseGeocode = (
       : undefined;
 
     return { result, geometry };
-  }).pipe(Effect.withSpan("nominatim.reverseGeocode"));
+  }).pipe(
+    Effect.tapError((error) =>
+      Effect.annotateCurrentSpan({
+        "error._tag": error._tag,
+        "error.message": error.message,
+      })
+    ),
+    Effect.withSpan("nominatim.reverseGeocode")
+  );
