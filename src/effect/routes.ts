@@ -25,7 +25,9 @@ import mapHtml from "../map.html";
  *
  * Returns the API documentation homepage as static HTML.
  */
-const indexHandler = Effect.succeed(HttpServerResponse.html(indexHtml));
+const indexHandler = Effect.succeed(HttpServerResponse.html(indexHtml)).pipe(
+  Effect.withSpan("routes.index")
+);
 
 /**
  * GET /map - Serve map.html
