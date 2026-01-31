@@ -1,6 +1,7 @@
 name = "postnummer-api"
 main = "src/effect/index.ts"
 compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
 
 [[d1_databases]]
 binding = "DB"
@@ -19,6 +20,12 @@ period = 60
 crons = ["0 3 * * *"]
 
 [observability]
+enabled = true
+
+[observability.logs]
+head_sampling_rate = 0.1
+
+[observability.traces]
 enabled = true
 head_sampling_rate = 0.1
 
