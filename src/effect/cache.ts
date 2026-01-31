@@ -191,7 +191,15 @@ export const findInCache = (
 
     // No candidate contained the point - cache miss
     return Option.none();
-  }).pipe(Effect.withSpan("cache.findInCache"));
+  }).pipe(
+    Effect.tapError((error) =>
+      Effect.annotateCurrentSpan({
+        "error._tag": error._tag,
+        "error.message": error.message,
+      })
+    ),
+    Effect.withSpan("cache.findInCache")
+  );
 
 // =============================================================================
 // saveToCache - Store a postal code result with geometry
@@ -271,7 +279,15 @@ export const saveToCache = (
           cause: error,
         }),
     });
-  }).pipe(Effect.withSpan("cache.saveToCache"));
+  }).pipe(
+    Effect.tapError((error) =>
+      Effect.annotateCurrentSpan({
+        "error._tag": error._tag,
+        "error.message": error.message,
+      })
+    ),
+    Effect.withSpan("cache.saveToCache")
+  );
 
 // =============================================================================
 // cleanupExpired - Remove expired cache entries
@@ -363,7 +379,15 @@ export const findGeometryByPostalCode = (
 
     const geometry = yield* parseGeometry(result.geometry);
     return Option.some(geometry);
-  }).pipe(Effect.withSpan("cache.findGeometryByPostalCode"));
+  }).pipe(
+    Effect.tapError((error) =>
+      Effect.annotateCurrentSpan({
+        "error._tag": error._tag,
+        "error.message": error.message,
+      })
+    ),
+    Effect.withSpan("cache.findGeometryByPostalCode")
+  );
 
 // =============================================================================
 // findGeometryByPostalCodeOnly - Query by postal code without country code
