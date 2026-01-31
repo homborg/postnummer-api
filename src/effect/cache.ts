@@ -36,13 +36,14 @@
  *    making them depend on CloudflareBindings in their Effect signature.
  */
 
-import { Effect, Option, pipe } from "effect";
+import { Effect, Option, pipe, Schema } from "effect";
 import { CloudflareBindings } from "./bindings";
 import { CacheError } from "./errors";
 import { pointInGeometry } from "../geo";
-import type {
-  CachedPostalCode as CachedPostalCodeType,
-  CacheableGeometry,
+import {
+  StoredGeometry,
+  type CachedPostalCode as CachedPostalCodeType,
+  type CacheableGeometry,
 } from "./schemas";
 
 // =============================================================================
@@ -143,12 +144,8 @@ export const findInCache = (
 
     // Step 2: Check point-in-polygon for each candidate
     for (const cached of candidates.results) {
-      const geometry = yield* Effect.try({
-        try: () =>
-          JSON.parse(cached.geometry) as {
-            type: string;
-            coordinates: number[][][] | number[][][][];
-          },
+      const parsed = yield* Effect.try({
+        try: () => JSON.parse(cached.geometry) as unknown,
         catch: (error) =>
           new CacheError({
             message: `Failed to parse cached geometry JSON: ${String(error)}`,
@@ -156,6 +153,17 @@ export const findInCache = (
             cause: error,
           }),
       });
+      const geometry = yield* pipe(
+        Schema.decodeUnknown(StoredGeometry)(parsed),
+        Effect.mapError(
+          (error) =>
+            new CacheError({
+              message: `Invalid cached geometry: ${String(error)}`,
+              operation: "read",
+              cause: error,
+            })
+        )
+      );
       if (pointInGeometry(lat, lng, geometry)) {
         return Option.some({
           postalCode: cached.postal_code,

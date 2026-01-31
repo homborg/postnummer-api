@@ -20,9 +20,13 @@ export interface FeatureCollection {
   features: Feature[];
 }
 
+type Polygon = readonly (readonly number[])[];
+type MultiPolygon = readonly Polygon[];
+type Coordinates = readonly (readonly (readonly number[])[])[] | readonly MultiPolygon[];
+
 function pointInPolygon(
   point: [number, number],
-  polygon: number[][]
+  polygon: Polygon
 ): boolean {
   const [x, y] = point;
   let inside = false;
@@ -47,11 +51,11 @@ function pointInPolygon(
 
 function pointInMultiPolygon(
   point: [number, number],
-  coordinates: number[][][] | number[][][][],
+  coordinates: Coordinates,
   isMulti: boolean
 ): boolean {
   if (isMulti) {
-    for (const polygon of coordinates as number[][][][]) {
+    for (const polygon of coordinates as readonly MultiPolygon[]) {
       const ring = polygon[0];
       if (ring && pointInPolygon(point, ring)) {
         return true;
@@ -59,7 +63,7 @@ function pointInMultiPolygon(
     }
     return false;
   } else {
-    const ring = (coordinates as number[][][])[0];
+    const ring = (coordinates as readonly Polygon[])[0];
     return ring ? pointInPolygon(point, ring) : false;
   }
 }
@@ -87,7 +91,7 @@ export function findPostalCode(
 export function pointInGeometry(
   lat: number,
   lng: number,
-  geometry: { type: string; coordinates: number[][][] | number[][][][] }
+  geometry: { type: string; coordinates: Coordinates }
 ): boolean {
   const point: [number, number] = [lng, lat];
   const isMulti = geometry.type === "MultiPolygon";

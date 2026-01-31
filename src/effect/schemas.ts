@@ -205,6 +205,19 @@ export const CacheableGeometry = Schema.Struct({
 export type CacheableGeometry = typeof CacheableGeometry.Type;
 
 /**
+ * Stored geometry parsed from cache - coordinates are typed for geo operations.
+ */
+export const StoredGeometry = Schema.Struct({
+  type: Schema.String,
+  coordinates: Schema.Union(
+    Schema.Array(Schema.Array(Schema.Array(Schema.Number))),
+    Schema.Array(Schema.Array(Schema.Array(Schema.Array(Schema.Number))))
+  ),
+});
+
+export type StoredGeometry = typeof StoredGeometry.Type;
+
+/**
  * Nominatim reverse geocoding response.
  * Note: lat/lon come as strings from Nominatim API, not numbers.
  */
