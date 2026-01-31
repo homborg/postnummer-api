@@ -34,7 +34,9 @@ const indexHandler = Effect.succeed(HttpServerResponse.html(indexHtml)).pipe(
  *
  * Returns the map visualization page as static HTML.
  */
-const mapHandler = Effect.succeed(HttpServerResponse.html(mapHtml));
+const mapHandler = Effect.succeed(HttpServerResponse.html(mapHtml)).pipe(
+  Effect.withSpan("routes.map")
+);
 
 // =============================================================================
 // Router Definition
