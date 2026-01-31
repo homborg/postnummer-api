@@ -44,6 +44,7 @@ import {
   StoredGeometry,
   type CachedPostalCode as CachedPostalCodeType,
   type CacheableGeometry,
+  type StoredGeometry as StoredGeometryType,
 } from "./schemas";
 
 // =============================================================================
@@ -68,10 +69,40 @@ export interface CacheResult {
 }
 
 /**
- * Geometry type for caching - use CacheableGeometry from schemas.
- * Coordinates are unknown at the schema level but cast at runtime for geo operations.
+ * Geometry type for caching - use StoredGeometry for reads, CacheableGeometry for writes.
  */
-type CacheGeometry = CacheableGeometry;
+type CacheGeometry = StoredGeometryType;
+
+/**
+ * Parse geometry JSON string into typed StoredGeometry.
+ */
+const parseGeometry = (
+  json: string
+): Effect.Effect<StoredGeometryType, CacheError, never> =>
+  pipe(
+    Effect.try({
+      try: () => JSON.parse(json) as unknown,
+      catch: (error) =>
+        new CacheError({
+          message: `Failed to parse geometry JSON: ${String(error)}`,
+          operation: "read",
+          cause: error,
+        }),
+    }),
+    Effect.flatMap((parsed) =>
+      pipe(
+        Schema.decodeUnknown(StoredGeometry)(parsed),
+        Effect.mapError(
+          (error) =>
+            new CacheError({
+              message: `Invalid geometry format: ${String(error)}`,
+              operation: "read",
+              cause: error,
+            })
+        )
+      )
+    )
+  );
 
 /**
  * Input for saving to cache - the postal code result to store.
@@ -144,26 +175,7 @@ export const findInCache = (
 
     // Step 2: Check point-in-polygon for each candidate
     for (const cached of candidates.results) {
-      const parsed = yield* Effect.try({
-        try: () => JSON.parse(cached.geometry) as unknown,
-        catch: (error) =>
-          new CacheError({
-            message: `Failed to parse cached geometry JSON: ${String(error)}`,
-            operation: "read",
-            cause: error,
-          }),
-      });
-      const geometry = yield* pipe(
-        Schema.decodeUnknown(StoredGeometry)(parsed),
-        Effect.mapError(
-          (error) =>
-            new CacheError({
-              message: `Invalid cached geometry: ${String(error)}`,
-              operation: "read",
-              cause: error,
-            })
-        )
-      );
+      const geometry = yield* parseGeometry(cached.geometry);
       if (pointInGeometry(lat, lng, geometry)) {
         return Option.some({
           postalCode: cached.postal_code,
@@ -204,7 +216,7 @@ export const findInCache = (
  */
 export const saveToCache = (
   result: CacheInput,
-  geometry: CacheGeometry
+  geometry: CacheableGeometry
 ): Effect.Effect<void, CacheError, CloudflareBindings> =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan({
@@ -212,8 +224,21 @@ export const saveToCache = (
       "cache.country": result.country,
     });
     const { db } = yield* CloudflareBindings;
-    const coords = geometry.coordinates as number[][][] | number[][][][];
-    const bbox = computeBoundingBox(coords, geometry.type === "MultiPolygon");
+    const parsed = yield* pipe(
+      Schema.decodeUnknown(StoredGeometry)(geometry),
+      Effect.mapError(
+        (error) =>
+          new CacheError({
+            message: `Invalid geometry for caching: ${String(error)}`,
+            operation: "write",
+            cause: error,
+          })
+      )
+    );
+    const bbox = computeBoundingBox(
+      parsed.coordinates,
+      parsed.type === "MultiPolygon"
+    );
     const expiresAt = Math.floor(Date.now() / 1000) + CACHE_TTL_SECONDS;
 
     yield* Effect.tryPromise({
@@ -333,16 +358,7 @@ export const findGeometryByPostalCode = (
       return Option.none();
     }
 
-    const geometry = yield* Effect.try({
-      try: () => JSON.parse(result.geometry) as CacheGeometry,
-      catch: (error) =>
-        new CacheError({
-          message: `Failed to parse cached geometry JSON: ${String(error)}`,
-          operation: "read",
-          cause: error,
-        }),
-    });
-
+    const geometry = yield* parseGeometry(result.geometry);
     return Option.some(geometry);
   }).pipe(Effect.withSpan("cache.findGeometryByPostalCode"));
 
@@ -388,22 +404,18 @@ export const findGeometryByPostalCodeOnly = (
       return Option.none();
     }
 
-    const geometry = yield* Effect.try({
-      try: () => JSON.parse(result.geometry) as CacheGeometry,
-      catch: (error) =>
-        new CacheError({
-          message: `Failed to parse cached geometry JSON: ${String(error)}`,
-          operation: "read",
-          cause: error,
-        }),
-    });
-
+    const geometry = yield* parseGeometry(result.geometry);
     return Option.some(geometry);
   });
 
 // =============================================================================
 // Helper: Compute bounding box from geometry coordinates
 // =============================================================================
+
+type ReadonlyPolygon = readonly (readonly number[])[];
+type ReadonlyCoordinates =
+  | readonly (readonly ReadonlyPolygon[])[]
+  | readonly ReadonlyPolygon[];
 
 /**
  * Compute a bounding box from polygon coordinates.
@@ -415,7 +427,7 @@ export const findGeometryByPostalCodeOnly = (
  * exist before using them.
  */
 function computeBoundingBox(
-  coordinates: number[][][] | number[][][][],
+  coordinates: ReadonlyCoordinates,
   isMulti: boolean
 ): { minLat: number; maxLat: number; minLng: number; maxLng: number } {
   let minLat = Infinity;
@@ -423,11 +435,10 @@ function computeBoundingBox(
   let minLng = Infinity;
   let maxLng = -Infinity;
 
-  const processRing = (ring: number[][]) => {
+  const processRing = (ring: ReadonlyPolygon) => {
     for (const coord of ring) {
       const lng = coord[0];
       const lat = coord[1];
-      // noUncheckedIndexedAccess requires explicit undefined check
       if (lng === undefined || lat === undefined) continue;
       minLat = Math.min(minLat, lat);
       maxLat = Math.max(maxLat, lat);
@@ -437,12 +448,12 @@ function computeBoundingBox(
   };
 
   if (isMulti) {
-    for (const polygon of coordinates as number[][][][]) {
+    for (const polygon of coordinates as readonly (readonly ReadonlyPolygon[])[]) {
       const ring = polygon[0];
       if (ring) processRing(ring);
     }
   } else {
-    const ring = (coordinates as number[][][])[0];
+    const ring = (coordinates as readonly ReadonlyPolygon[])[0];
     if (ring) processRing(ring);
   }
 

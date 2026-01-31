@@ -47,6 +47,7 @@ import {
   BadGatewaySchema,
   PolygonQueryParamsSchema,
   CacheableGeometry,
+  CloudflareRequestInfo,
 } from "./schemas";
 import { findPostalCode, findPolygonByPostalCode } from "./geo";
 import { findInCache, saveToCache, findGeometryByPostalCode } from "./cache";
@@ -280,9 +281,17 @@ export const PostalCodeGroupLive = HttpApiBuilder.group(
             Effect.gen(function* () {
               yield* Effect.annotateCurrentSpan({ "polygon.postalCode": postalCode });
               const request = yield* HttpServerRequest.HttpServerRequest;
-              const cfCountry = (request.source as Request & { cf?: { country?: string } })
-                .cf?.country;
-              const countryCode = (urlParams.country ?? cfCountry)?.trim().toUpperCase();
+              const cfInfo = Schema.decodeUnknownOption(CloudflareRequestInfo)(
+                request.source
+              );
+              const cfCountry = Option.flatMap(cfInfo, (info) =>
+                Option.fromNullable(info.cf?.country)
+              );
+              const countryCode = (
+                urlParams.country ?? Option.getOrUndefined(cfCountry)
+              )
+                ?.trim()
+                .toUpperCase();
 
               if (!countryCode) {
                 return yield* Effect.fail({

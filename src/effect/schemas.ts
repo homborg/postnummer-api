@@ -321,3 +321,21 @@ export const TooManyRequestsSchema = Schema.Struct({
 }).annotations({ identifier: "TooManyRequests" });
 
 export type TooManyRequests = typeof TooManyRequestsSchema.Type;
+
+// =============================================================================
+// Cloudflare Request Extensions
+// =============================================================================
+
+/**
+ * Cloudflare-specific properties on incoming requests.
+ * Used to extract geo information like country code.
+ */
+export const CloudflareRequestInfo = Schema.Struct({
+  cf: Schema.optional(
+    Schema.Struct({
+      country: Schema.optional(Schema.String),
+    })
+  ),
+});
+
+export type CloudflareRequestInfo = typeof CloudflareRequestInfo.Type;
